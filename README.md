@@ -2,5 +2,7 @@ This repository contains the most recent version of the R package "primre". The 
 ___
 
 [1] Bryant, Benjamin P., and Robert J. Lempert. "Thinking inside the box: a participatory, computer-assisted approach to scenario discovery." Technological Forecasting and Social Change 77.1 (2010): 34-49.
-[2] Arzamasov, Vadim, and Klemens Böhm. "Scenario Discovery via Rule Extraction." arXiv preprint arXiv:1910.01713 (2019).
+
+[2] Arzamasov, Vadim, and Klemens BÃ¶hm. "Scenario Discovery via Rule Extraction." arXiv preprint arXiv:1910.01713 (2019).
+
 [3] Friedman, Jerome H., and Nicholas I. Fisher. "Bump hunting in high-dimensional data." Statistics and Computing 9.2 (1999): 123-143.
