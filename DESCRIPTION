@@ -1,0 +1,18 @@
+Package: primre
+Title: Pedagogical Rule Extraction with PRIM
+Version: 0.11
+Author: Vadim Arzamasov <vadim.arzamasov@gmail.com>
+Maintainer: Vadim Arzamasov <vadim.arzamasov@gmail.com>
+Description: PRIM for bump hunting in high-dimensional data with intermediate step of labeling more points with random forest.
+Depends: R (>= 3.5.0)
+Imports:
+    lhs,
+    prim,
+    caret,
+    stats
+Suggests:
+    sensitivity
+License: GPL-2
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.1.1
