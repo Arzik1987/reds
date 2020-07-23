@@ -4,8 +4,7 @@
 \alias{rf.prim}
 \title{RF -> PRIM}
 \usage{
-rf.prim(dtrain, dtest, box, npts = 1e+05, minpts = 20,
-  grow.deep = FALSE)
+rf.prim(dtrain, dtest, box, npts = 1e+05, minpts = 20, grow.deep = FALSE)
 }
 \arguments{
 \item{dtrain}{list, containing training data. The first element contains matrix/data frame of real attribute values.

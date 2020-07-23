@@ -4,8 +4,17 @@
 \alias{prim.single}
 \title{One cut PRIM}
 \usage{
-prim.single(x, y, box, peel.alpha = 0.05, threshold = 1,
-  pasting = FALSE, paste.alpha = 0.01, x.init, y.init)
+prim.single(
+  x,
+  y,
+  box,
+  peel.alpha = 0.05,
+  threshold = 1,
+  pasting = FALSE,
+  paste.alpha = 0.01,
+  x.init,
+  y.init
+)
 }
 \arguments{
 \item{x}{matrix of real. Data values for examples within the box}

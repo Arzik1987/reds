@@ -4,8 +4,7 @@
 \alias{bagging.prim}
 \title{PRIM with bagging (bumping)}
 \usage{
-bagging.prim(dtrain, dtest, box, features = "some", iter = 50,
-  minpts = 20)
+bagging.prim(dtrain, dtest, box, features = "some", iter = 50, minpts = 20)
 }
 \arguments{
 \item{dtrain}{list, containing training data. The first element contains matrix/data frame of real attribute values.

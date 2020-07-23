@@ -4,8 +4,15 @@
 \alias{norm.prim}
 \title{PRIM returning peeling trajectory}
 \usage{
-norm.prim(dtrain, dtest, deval = dtrain, box, minpts = 20,
-  max.peels = 99, pasting = FALSE)
+norm.prim(
+  dtrain,
+  dtest,
+  deval = dtrain,
+  box,
+  minpts = 20,
+  max.peels = 99,
+  pasting = FALSE
+)
 }
 \arguments{
 \item{dtrain}{list, containing training data. The first element contains matrix/data frame of real attribute values.

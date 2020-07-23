@@ -4,16 +4,37 @@
 \alias{get.labs.box}
 \title{Syntetic data generator}
 \usage{
-get.labs.box(box = NULL, n.points = 0, laths = TRUE, pts = 0,
-  use.pts = FALSE, dgp, thr.hart3 = -1, thr.hart6sc = 1,
-  thr.sobol = 0.7, thr.ishigami = 1, thr.morris = 20,
-  thr.otlcircuit = 4.5, thr.borehole = 1000, thr.piston = 0.4,
-  thr.wingweight = 250, thr.moon10hd = 0, thr.moon10hdc1 = 0,
-  thr.moon10low = 1.5, thr.welchetal92 = 0, thr.linketal06dec = 0.15,
-  thr.linketal06simple = 0.33, thr.linketal06sin = 0,
-  thr.loepetal13 = 9, thr.morretal06 = -330, thr.oakoh04 = 10,
-  thr.willetal06 = -1, thr.hart4 = -0.5, thr.ellipse = 0.8,
-  thr.soblev99 = 2000)
+get.labs.box(
+  box = NULL,
+  n.points = 0,
+  laths = TRUE,
+  pts = 0,
+  use.pts = FALSE,
+  dgp,
+  thr.hart3 = -1,
+  thr.hart6sc = 1,
+  thr.sobol = 0.7,
+  thr.ishigami = 1,
+  thr.morris = 20,
+  thr.otlcircuit = 4.5,
+  thr.borehole = 1000,
+  thr.piston = 0.4,
+  thr.wingweight = 250,
+  thr.moon10hd = 0,
+  thr.moon10hdc1 = 0,
+  thr.moon10low = 1.5,
+  thr.welchetal92 = 0,
+  thr.linketal06dec = 0.15,
+  thr.linketal06simple = 0.33,
+  thr.linketal06sin = 0,
+  thr.loepetal13 = 9,
+  thr.morretal06 = -330,
+  thr.oakoh04 = 10,
+  thr.willetal06 = -1,
+  thr.hart4 = -0.5,
+  thr.ellipse = 0.8,
+  thr.soblev99 = 2000
+)
 }
 \arguments{
 \item{box}{matrix of real, specifying the box, from which the points should be sampled. If null, the unit box is used}
