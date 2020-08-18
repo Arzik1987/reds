@@ -4,7 +4,15 @@
 \alias{rf.prim}
 \title{RF -> PRIM}
 \usage{
-rf.prim(dtrain, dtest, box, npts = 1e+05, minpts = 20, grow.deep = FALSE)
+rf.prim(
+  dtrain,
+  dtest,
+  box,
+  peel.alpha = 0.05,
+  npts = 1e+05,
+  minpts = 20,
+  grow.deep = FALSE
+)
 }
 \arguments{
 \item{dtrain}{list, containing training data. The first element contains matrix/data frame of real attribute values.
@@ -14,20 +22,22 @@ the second element contains vector of labels 0/1.}
 
 \item{box}{matrix of real. Initial hyperbox, covering data}
 
+\item{peel.alpha}{real. The peeling parameter of PRIM from the interval (0,1)}
+
 \item{npts}{number of points to be generated and labeled}
 
 \item{minpts}{integer. Minimal number of points in the box for PRIM to continue peeling}
 
-\item{grow.deep}{logical. If true, criterion \code{minpts} is applied to the newly 
+\item{grow.deep}{logical. If true, criterion \code{minpts} is applied to the newly
 generated dataset, not to the initial one}
 }
 \value{
 list.
 \itemize{
-\item \code{pr.prob} matrix with coverage (recall) in the first column and 
+\item \code{pr.prob} matrix with coverage (recall) in the first column and
 density (precision) in the second column, evaluated on \code{dtest} and produced
 when the new data is labelled with probabilities
-\item \code{pr.pred} matrix with coverage (recall) in the first column and 
+\item \code{pr.pred} matrix with coverage (recall) in the first column and
 density (precision) in the second column, evaluated on \code{dtest} and produced
 when the new data is labelled with 0/1
 \item \code{boxes.prob} list of matrices defining boxes constituting peeling trajectory
@@ -35,7 +45,7 @@ when the new data is labelled with probabilities
 \item \code{boxes.pred} list of matrices defining boxes constituting peeling trajectory
 when the new data is labelled with 0/1
 \item \code{tune.par} the best hyperparameter value(s) for random forest, produced with
-the default settings of function \code{train} from 'caret' package. 
+the default settings of function \code{train} from 'caret' package.
 }
 }
 \description{
@@ -45,16 +55,30 @@ and labels them. These new points serve as input for PRIM algorithm.
 \examples{
 
 dtrain <- dtest <- list()
-dtest[[1]] <- dsgc_sym[1001:10000, 1:12]
-dtest[[2]] <- dsgc_sym[1001:10000, 13]
-dtrain[[1]] <- dsgc_sym[1:500, 1:12]
-dtrain[[2]] <- dsgc_sym[1:500, 13]
+dtest[[1]] <- dsgc_sym[1:9500, 1:12]
+dtest[[2]] <- dsgc_sym[1:9500, 13]
+dtrain[[1]] <- dsgc_sym[9501:10000, 1:12]
+dtrain[[2]] <- dsgc_sym[9501:10000, 13]
 box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
 
 set.seed(1)
 res.rf <- rf.prim(dtrain = dtrain, dtest = dtest, box = box, grow.deep = TRUE)
 res <- norm.prim(dtrain = dtrain, dtest = dtest, box = box)
+
+plot(res.rf[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
+xlab = "recall", ylab = "precision")
+lines(res.rf[[2]], col = "red")
+lines(res[[1]], col = "blue")
+legend("bottomleft", legend = c("rf prob test", "rf pred test", "norm test"),
+col = c("black", "red", "blue"), lty = c(1, 1, 1))
+
+
+set.seed(1)
+res.rf <- rf.prim(dtrain = dtrain, dtest = dtest, box = box,
+peel.alpha = c(0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19))
+res <- norm.prim(dtrain = dtrain, dtest = dtest, box = box,
+peel.alpha = c(0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19))
 
 plot(res.rf[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
 xlab = "recall", ylab = "precision")

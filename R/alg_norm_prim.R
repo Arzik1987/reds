@@ -1,7 +1,7 @@
 #' PRIM returning peeling trajectory
 #'
 #' The function applies PRIM to train data and evaluates its quality on test data
-#' 
+#'
 #' @param dtrain list, containing training data. The first element contains matrix/data frame of real attribute values.
 #' the second element contains vector of labels 0/1.
 #' @param dtest list, containing test data. Structured in the same way as \code{dtrain}
@@ -10,27 +10,33 @@
 #' @param box matrix of real. Initial hyperbox, covering data
 #' @param minpts integer. Minimal number of points in the box for PRIM to continue peeling
 #' @param max.peels integer. Maximum length of the peeling trajectory (number of boxes)
-#' @param pasting logical. Whether pasting is used on each box forming the peeling rajectory
-#' 
+#' @param peel.alpha a set of real. The peeling parameter of PRIM from the interval (0,1)
+#' @param pasting logical. Whether pasting is used on each box forming the peeling trajectory
+#' @param paste.alpha real. The pasting parameter of PRIM from the interval (0,1)
+#' @param threshold real. If precision of the current box on \code{test}
+#' is greater or equal \code{threshold}, PRIM stops peeling
+#'
 #' @keywords models, multivariate
-#' 
-#' @references Friedman, J.H. and Fisher, N.I. 1999. Bump hunting in high-dimensional data. 
+#'
+#' @references Friedman, J.H. and Fisher, N.I. 1999. Bump hunting in high-dimensional data.
 #' Statistics and Computing. 9, 2 (1999), 123-143.
-#' 
+#'
 #' @return list.
 #' \itemize{
-#' \item \code{pr.test} matrix with coverage (recall) in the first column and 
+#' \item \code{pr.test} matrix with coverage (recall) in the first column and
 #' density (precision) in the second column, evaluated on \code{dtest}
-#' \item \code{pr.train} matrix with coverage (recall) in the first column and 
+#' \item \code{pr.eval} matrix with coverage (recall) in the first column and
 #' density (precision) in the second column, evaluated on \code{deval}
 #' \item \code{boxes} list of matrices defining boxes constituting peeling trajectory
 #' }
-#' 
+#'
+#' @importFrom stats quantile
+#'
 #' @seealso \code{\link{rf.prim}},
 #' \code{\link{bagging.prim}}
-#' 
+#'
 #' @export
-#' 
+#'
 #' @examples
 #'
 #' dtrain <- dtest <- list()
@@ -40,75 +46,123 @@
 #' dtrain[[2]] <- dsgc_sym[1:500, 13]
 #' box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
 #' 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
-#' 
+#'
 #' set.seed(1)
 #' res1 <- norm.prim(dtrain = dtrain, dtest = dtest, box = box)
 #' res2 <- norm.prim(dtrain = dtrain, dtest = dtest, box = box, pasting = TRUE)
+#' res3 <- norm.prim(dtrain = dtrain, dtest = dtest, box = box,
+#' peel.alpha = c(0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19))
 #'
-#' plot(res1[[1]], col = "green", type = "l")
+#' plot(res3[[1]], col = "green", type = "l")
 #' lines(res2[[1]], col = "blue")
+#' lines(res1[[1]], col = "brown")
 
-norm.prim <- function(dtrain, dtest, deval = dtrain, box, minpts = 20, max.peels = 99,
-                      pasting = FALSE){
-  
-  if(pasting){
-    x.init <- dtrain[[1]]
-    y.init <- dtrain[[2]]
-  } else {
-    x.init <- NULL
-    y.init <- NULL
+
+norm.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.peels = 999,
+                     peel.alpha = 0.05, pasting = FALSE, paste.alpha = 0.01, threshold = 1){
+
+  if(length(peel.alpha) > 1){
+    peel.alpha <- select.alpha(dtrain = dtrain, box = box, minpts = minpts,
+                               max.peels = max.peels, peel.alpha = peel.alpha, threshold = threshold)
   }
-  boxes <- list()
-  boxes[[1]] <- box
-  
-  pr.eval <- get.metrics(deval[[2]], deval[[2]])
-  pr.test <-  get.metrics(dtest[[2]], dtest[[2]])
 
-  res <- prim.single(dtrain[[1]], dtrain[[2]], box, pasting = pasting, x.init = x.init, y.init = y.init)
-  ind.in.box <- prim:::in.box(deval[[1]], res[[3]], d = ncol(res[[3]]), boolean = TRUE)
-  i <- 0
-  
-  #### with 'sum(ind.in.box) >= minpts' we allow that the box after peeling contains less
-  #### than 'minpts' points in case pasting == TRUE. This does not have huge consequences 
-  #### for our experiments, but allows shorter code
-  
-  while(length(res[[2]]$y) >= minpts & sum(ind.in.box) >= minpts & res[[1]] == FALSE & i < max.peels){
-    i <- i + 1
-    
-    pred <- deval[[2]][ind.in.box]
-    pr.eval <- rbind(pr.eval, get.metrics(pred, deval[[2]]))
-    
-    ind.in.box <- prim:::in.box(dtest[[1]], res[[3]], d = ncol(res[[3]]), boolean = TRUE)
-    pred <- dtest[[2]][ind.in.box]
-    pr.test <- rbind(pr.test, get.metrics(pred, dtest[[2]]))
-    
-    boxes <- append(boxes, list(res[[3]]))
-    
-    num.before <- length(res[[2]]$y)
-    res <- prim.single(res[[2]]$x, res[[2]]$y, res[[2]]$box,
-                           pasting = pasting, x.init = x.init, y.init = y.init)
-    ind.in.box <- prim:::in.box(deval[[1]], res[[3]], d = ncol(res[[3]]), boolean = TRUE)
-    
-    if(num.before == length(res[[2]]$y) & res[[1]] == FALSE){
-      warning("can't peel any direction")
-      res[[1]] = TRUE
+  peel <- function(){
+
+    hgh <- -Inf
+    bnd <- -Inf
+    vol.red <- 1
+
+    for(i in 1:ncol(x)){
+      bound <- quantile(x[, i], peel.alpha, type = 8)
+      vol.r <- (bound - box[1, i])/(box[2, i] - box[1, i])
+      retain <- (x[, i] >= bound)                                   # this inequality implicitly assumes low (< peel.alpha) share of duplicates for each value
+      tar <- sum(y[retain])/sum(retain)
+      if(tar > hgh | (tar == hgh & vol.r < vol.red)){
+        hgh <- tar
+        vol.red <- vol.r
+        inds <- retain
+        rn = 1
+        cn = i
+        bnd = bound
+      }
+      bound <- quantile(x[, i], 1 - peel.alpha, type = 8)
+      vol.r <- (box[2, i] - bound)/(box[2, i] - box[1, i])
+      retain <- (x[, i] <= bound)
+      tar <- sum(y[retain])/sum(retain)
+      if(tar > hgh | (tar == hgh & vol.r < vol.red)){
+        vol.red <- vol.r
+        hgh <- tar
+        inds <- retain
+        rn = 2
+        cn = i
+        bnd = bound
+      }
     }
+    x <<- x[inds,]
+    y <<- y[inds]
+    box[rn, cn] <<- bnd
+    continue.peeling <<- ((sum(inds)/length(inds)) < 1 & hgh < threshold)
   }
-  
-  #### cut the trajectory at its first maximum
-  
-  last <- min(which(pr.eval[, 2] == max(pr.eval[, 2])))
-  pr.test = pr.test[1:last,]
-  pr.eval = pr.eval[1:last,]
-  
-  #### make sure, that pr.x are still matrices
 
-  if(last == 1){
-    pr.test <- matrix(pr.test, ncol = 2, byrow = TRUE)
-    pr.eval <- matrix(pr.eval, ncol = 2, byrow = TRUE)
+  qual.pr <- function(d){
+    Np = sum(d[[2]])
+    retain <- rep(TRUE, length(d[[2]]))
+    for(i in 1:ncol(d[[1]])){
+      retain <- retain & d[[1]][, i] >= box.p[1, i]
+      retain <- retain & d[[1]][, i] <= box.p[2, i]
+    }
+    n = length(d[[2]][retain])
+    np = sum(d[[2]][retain])
+    rec <- np/Np
+    pr <- np/n
+    c(rec, pr, sum(retain))
   }
-  
-  return(list(pr.test = pr.test, pr.eval = pr.eval, boxes = boxes[1:last]))
+
+
+  x <- dtrain[[1]]
+  y <- dtrain[[2]]
+  continue.peeling <- TRUE
+  neval <- nrow(deval[[1]])
+
+  i = 0
+  boxes <- list()
+  box.p <- box
+  q <- qtest <- matrix(ncol = 2, nrow = 0)
+
+  while(length(y) >= minpts & neval >= minpts & continue.peeling & i <= max.peels){
+    temp <- qual.pr(deval)
+    neval <- temp[3]
+    q <- rbind(q, temp[1:2])
+    if(!is.null(dtest)){
+      qtest <- rbind(qtest, qual.pr(dtest)[1:2])
+    }
+    i <- i + 1
+    boxes <- append(boxes, list(box.p))
+    peel()
+    box.p <- box
+
+    # pasting step (use prim package)
+    if(pasting){
+      res.p <- list(x = x, y = y, box = box)
+      while (!is.null(res.p)){
+        box.p <- res.p$box
+        res.p <- prim:::paste.one(x = res.p$x, y = res.p$y, box = res.p$box,
+                                      x.init = dtrain[[1]], y.init = dtrain[[2]], paste.alpha = paste.alpha,
+                                      mass.min = 0, threshold = 0, d = ncol(dtrain[[1]]), n = 1,
+                                      y.fun = mean, verbose = FALSE)
+      }
+    }
+    # end of pasting
+  }
+
+  ret <- which(q[, 2] == max(q[, 2]))[1]
+  q <- matrix(q[1:ret,], ncol = 2)
+  boxes <- boxes[1:ret]
+  if(!is.null(dtest)){
+    qtest <- matrix(qtest[1:ret,], ncol = 2)
+  }
+
+  return(list(pr.test = qtest, pr.eval = q, boxes = boxes, peel.alpha = peel.alpha))
 }
 
 

@@ -6,12 +6,15 @@
 \usage{
 norm.prim(
   dtrain,
-  dtest,
+  dtest = NULL,
   deval = dtrain,
   box,
   minpts = 20,
-  max.peels = 99,
-  pasting = FALSE
+  max.peels = 999,
+  peel.alpha = 0.05,
+  pasting = FALSE,
+  paste.alpha = 0.01,
+  threshold = 1
 )
 }
 \arguments{
@@ -29,14 +32,21 @@ By default coincides with \code{dtrain}}
 
 \item{max.peels}{integer. Maximum length of the peeling trajectory (number of boxes)}
 
-\item{pasting}{logical. Whether pasting is used on each box forming the peeling rajectory}
+\item{peel.alpha}{a set of real. The peeling parameter of PRIM from the interval (0,1)}
+
+\item{pasting}{logical. Whether pasting is used on each box forming the peeling trajectory}
+
+\item{paste.alpha}{real. The pasting parameter of PRIM from the interval (0,1)}
+
+\item{threshold}{real. If precision of the current box on \code{test}
+is greater or equal \code{threshold}, PRIM stops peeling}
 }
 \value{
 list.
 \itemize{
-\item \code{pr.test} matrix with coverage (recall) in the first column and 
+\item \code{pr.test} matrix with coverage (recall) in the first column and
 density (precision) in the second column, evaluated on \code{dtest}
-\item \code{pr.train} matrix with coverage (recall) in the first column and 
+\item \code{pr.eval} matrix with coverage (recall) in the first column and
 density (precision) in the second column, evaluated on \code{deval}
 \item \code{boxes} list of matrices defining boxes constituting peeling trajectory
 }
@@ -57,12 +67,15 @@ box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
 set.seed(1)
 res1 <- norm.prim(dtrain = dtrain, dtest = dtest, box = box)
 res2 <- norm.prim(dtrain = dtrain, dtest = dtest, box = box, pasting = TRUE)
+res3 <- norm.prim(dtrain = dtrain, dtest = dtest, box = box,
+peel.alpha = c(0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19))
 
-plot(res1[[1]], col = "green", type = "l")
+plot(res3[[1]], col = "green", type = "l")
 lines(res2[[1]], col = "blue")
+lines(res1[[1]], col = "brown")
 }
 \references{
-Friedman, J.H. and Fisher, N.I. 1999. Bump hunting in high-dimensional data. 
+Friedman, J.H. and Fisher, N.I. 1999. Bump hunting in high-dimensional data.
 Statistics and Computing. 9, 2 (1999), 123-143.
 }
 \seealso{
