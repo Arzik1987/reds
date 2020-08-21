@@ -12,7 +12,7 @@ bagging.prim(
   minpts = 20,
   peel.alpha = 0.05,
   features = "some",
-  iter = 30,
+  iter = 50,
   denom = 5
 )
 }
@@ -27,11 +27,15 @@ the second element contains vector of labels 0/1.}
 \item{minpts}{integer. Minimal number of points in the box for PRIM to continue peeling}
 
 \item{features}{character or integer. Refers to the number of features used in each iteration.
-If integer, defines this number.
-If "some", calculated as \code{ceiling(sqrt(ncol(dtrain[[1]])))},
-if "all", all features are used. Default is "some"}
+If integer, defines this number;
+if "some", calculated as \code{ceiling(sqrt(ncol(dtrain[[1]])))};
+if "all", all features are used. Default is "some"
+if "cv", is chosen automatically from a set defined by \code{ncol(dtrain[[1]])} and \code{denom}
+parameter}
 
-\item{iter}{integer. The number of iterations (sequences of boxes learned). Default is 50}
+\item{iter}{integer. The number of iterations (sequences of boxes learned). Default is 30}
+
+\item{denom}{the maximal length of the set of \code{features} values to choose from}
 }
 \value{
 list.
@@ -45,6 +49,37 @@ density (precision) in the second column, evaluated on \code{deval}
 }
 \description{
 The function implements PRIM with bagging (bumping)
+}
+\examples{
+
+dtrain <- dtest <- list()
+dtest[[1]] <- dsgc_sym[1001:10000, 1:12]
+dtest[[2]] <- dsgc_sym[1001:10000, 13]
+dtrain[[1]] <- dsgc_sym[1:500, 1:12]
+dtrain[[2]] <- dsgc_sym[1:500, 13]
+box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
+5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
+
+res <- norm.prim(dtrain = dtrain, dtest = dtest, box = box)
+set.seed(1)
+res.bag <- bagging.prim(dtrain = dtrain, dtest = dtest, box = box)
+res.bag.all <- bagging.prim(dtrain = dtrain, dtest = dtest, box = box, features = "all")
+res.bag.cv <- bagging.prim(dtrain = dtrain, dtest = dtest, box = box, features = "cv", peel.alpha = c(0.05, 0.1, 0.15))
+
+plot(res[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
+xlab = "recall", ylab = "precision")
+lines(res[[2]], col = "black", lty = 3)
+lines(res.bag[[1]], lty = 1, col = "red")
+lines(res.bag[[2]], lty = 3, col = "red")
+lines(res.bag.all[[1]], lty = 1, col = "green")
+lines(res.bag.all[[2]], lty = 3, col = "green")
+lines(res.bag.cv[[1]], lty = 1, col = "blue")
+lines(res.bag.cv[[2]], lty = 3, col = "blue")
+legend("bottomleft", legend = c("norm test", "norm train", "bagging test",
+"bagging train", "bagging all test", "bagging all train", "bagging cv train",
+"bagging cv test"),
+lty = c(1, 3, 1, 3, 1, 3, 1, 3),
+col = c("black", "black", "red", "red", "green", "green", "blue", "blue"))
 }
 \references{
 J. H. Kwakkel and S. C. Cunningham, "Improving scenario discovery by bagging random boxes,"

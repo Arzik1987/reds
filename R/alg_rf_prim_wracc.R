@@ -1,7 +1,7 @@
-#' RF -> PRIM
+#' RF -> BestInterval
 #'
 #' The function learns RF model on a given dataset. Then it generates new points with latin hypercube sampling
-#' and labels them. These new points serve as input for PRIM algorithm.
+#' and labels them. These new points serve as input for BestInterval algorithm.
 #'
 #' @param dtrain list, containing training data. The first element contains matrix/data frame of real attribute values.
 #' the second element contains vector of labels 0/1.
@@ -49,71 +49,37 @@
 #' 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
 #'
 #' set.seed(1)
-#' res.rf <- rf.prim(dtrain = dtrain, dtest = dtest, box = box, grow.deep = TRUE)
-#' res <- norm.prim(dtrain = dtrain, dtest = dtest, box = box)
-#'
-#' plot(res.rf[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
-#' xlab = "recall", ylab = "precision")
-#' lines(res.rf[[2]], col = "red")
-#' lines(res[[1]], col = "blue")
-#' legend("bottomleft", legend = c("rf prob test", "rf pred test", "norm test"),
-#' col = c("black", "red", "blue"), lty = c(1, 1, 1))
-#'
-#'
-#' set.seed(1)
-#' res.rf <- rf.prim(dtrain = dtrain, dtest = dtest, box = box,
-#' peel.alpha = c(0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19))
-#' res <- norm.prim(dtrain = dtrain, dtest = dtest, box = box,
-#' peel.alpha = c(0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19))
-#'
-#' plot(res.rf[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
-#' xlab = "recall", ylab = "precision")
-#' lines(res.rf[[2]], col = "red")
-#' lines(res[[1]], col = "blue")
-#' legend("bottomleft", legend = c("rf prob test", "rf pred test", "norm test"),
-#' col = c("black", "red", "blue"), lty = c(1, 1, 1))
+#' res.rf <- rf.prim.w(dtrain = dtrain, dtest = dtest, box = box)
+#' res <- norm.prim.w(dtrain = dtrain, dtest = dtest, box = box)
 
 
-rf.prim <- function(dtrain, dtest, box, peel.alpha = 0.05,
-                    npts = 100000, minpts = 20, grow.deep = FALSE){
+rf.prim.w <- function(dtrain, dtest = NULL, box, max.peels = 999,
+                  peel.alpha = 0.05, npts = 10000){
+
+  nc <- ncol(dtrain[[1]])
 
   if(length(peel.alpha) > 1){
-    peel.alpha <- select.alpha(dtrain = dtrain, box = box, peel.alpha = peel.alpha)
+    peel.alpha <- select.alpha.w(dtrain = dtrain, box = box,
+                                 max.peels = max.peels, peel.alpha = peel.alpha)
   }
 
-  dim <- ncol(dtrain[[1]])
   dp <- list()
-  dp[[1]] <- lhs::randomLHS(npts, dim)
-    for(i in 1:dim){
+  dp[[1]] <- lhs::randomLHS(npts, nc)
+    for(i in 1:nc){
     d.width <- box[2, i] - box[1, i]
     dp[[1]][, i] <- dp[[1]][, i]*d.width + box[1, i]
   }
 
-  colnames(dtrain[[1]]) <- colnames(dtest[[1]]) <- colnames(dp[[1]]) <- paste0("x", paste0(1:dim))
+  colnames(dtrain[[1]]) <- colnames(dtest[[1]]) <- colnames(dp[[1]]) <- paste0("x", paste0(1:nc))
   res.rf <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]), method = "rf")
   print("finished with training RF")
 
   dp[[2]] <- predict(res.rf, dp[[1]], type = "prob")[, 2]
-  if(grow.deep){
-    dtrain = dp
-  }
-  temp <- norm.prim(dtrain = dp, dtest = dtest, deval = dtrain, box = box,
-                    minpts = minpts, peel.alpha = peel.alpha)
-  pr.prob <- temp$pr.test
-  boxes.prob <- temp$boxes
+  temp <- norm.prim.w(dtrain = dp, dtest = dtest, box = box, max.peels = max.peels,
+                                  peel.alpha = peel.alpha)
 
-  dp[[2]] <- predict(res.rf, dp[[1]])
-  dp[[2]] <- as.numeric(as.character(dp[[2]]))
-  if(grow.deep){
-    dtrain = dp
-  }
-  temp <- norm.prim(dtrain = dp, dtest = dtest, deval = dtrain, box = box,
-                    minpts = minpts, peel.alpha = peel.alpha)
-  pr.pred <- temp$pr.test
-  boxes.pred <- temp$boxes
-
-  return(list(pr.prob = pr.prob, pr.pred = pr.pred, boxes.prob = boxes.prob, boxes.pred = boxes.pred,
-              tune.par = res.rf$bestTune, peel.alpha = peel.alpha))
+  return(list(qtest = temp$qtest, qtrain = temp$qtrain, box = temp$box,
+              peel.alpha = temp$peel.alpha, tune.par = res.rf$bestTune))
 }
 
 

@@ -10,8 +10,8 @@ best.interval(
   box,
   depth = 5,
   beam.size = 1,
-  add.iter = 0,
-  keep = 10
+  keep = 10,
+  denom = 6
 )
 }
 \arguments{
@@ -23,15 +23,16 @@ WRAcc on test data is not computed}
 
 \item{box}{matrix of real. Initial hyperbox, covering data}
 
-\item{depth}{integer. The maximal number of dimensions restricted}
+\item{depth}{integer or "cv". The maximal number of dimensions restricted.
+If "cv", \code{depth} is chosen automatically with 5-fild cross-validation
+from a set defined by \code{ncol(dtrain[[1]])} and \code{denom} parameter}
 
 \item{beam.size}{integer.The size of the beam in the beam search}
 
-\item{add.iter}{integer. The number of additional iterations trying to refine already
-restricted dimensions}
-
 \item{keep}{integer. If greater than \code{beam.size}, specifies the maximum
 number of boxes to be refined at each iteration in case all have equal WRAcc}
+
+\item{denom}{the maximal length of the set of \code{features} values to choose from}
 }
 \value{
 list.
@@ -55,7 +56,9 @@ box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
 
 norm.prim.w(dtrain = dtrain, dtest = dtest, box = box, peel.alpha = 0.05)
+norm.prim.w(dtrain = dtrain, dtest = dtest, box = box, peel.alpha = c(0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19))
 best.interval(dtrain = dtrain, dtest = dtest, box = box, depth = 12, beam.size = 1)
+best.interval(dtrain = dtrain, dtest = dtest, box = box, depth = "cv", beam.size = 1)
 
 
 dx <- bi_test[, 1:4]
@@ -64,8 +67,7 @@ box = matrix(c(0,0,0,0,1,2,1,1), nrow = 2, byrow = TRUE)
 sort(dx[, 3], decreasing = TRUE)[5:6]
 
 best.interval(list(dx, dy), box = box, depth = 3, beam.size = 1)$box
-best.interval(list(dx, dy), box = box, depth = 3, beam.size = 1, add.iter = 3)$box # clear difference in the third dimension
-best.interval(list(dx, dy), box = box, depth = 3, beam.size = 4)$box               # clear difference in the third dimension
+best.interval(list(dx, dy), box = box, depth = 3, beam.size = 4)$box               # clear difference in the fourth dimension
 
 best.interval(list(dx, dy), box = box, depth = 4, beam.size = 4)$box
 norm.prim.w(list(dx, dy), box = box, peel.alpha = 0.05)$box

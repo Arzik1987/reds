@@ -7,12 +7,13 @@
 #' @param dtest list, containing test data. Structured in the same way as \code{dtrain}. If NULL, the
 #' WRAcc on test data is not computed
 #' @param box matrix of real. Initial hyperbox, covering data
-#' @param depth integer. The maximal number of dimensions restricted
+#' @param depth integer or "cv". The maximal number of dimensions restricted.
+#' If "cv", \code{depth} is chosen automatically with 5-fild cross-validation
+#' from a set defined by \code{ncol(dtrain[[1]])} and \code{denom} parameter
 #' @param beam.size integer.The size of the beam in the beam search
-#' @param add.iter integer. The number of additional iterations trying to refine already
-#' restricted dimensions
 #' @param keep integer. If greater than \code{beam.size}, specifies the maximum
 #' number of boxes to be refined at each iteration in case all have equal WRAcc
+#' @param denom the maximal length of the set of \code{features} values to choose from
 #'
 #' @keywords models, multivariate
 #'
@@ -41,7 +42,9 @@
 #' 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
 #'
 #' norm.prim.w(dtrain = dtrain, dtest = dtest, box = box, peel.alpha = 0.05)
+#' norm.prim.w(dtrain = dtrain, dtest = dtest, box = box, peel.alpha = c(0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19))
 #' best.interval(dtrain = dtrain, dtest = dtest, box = box, depth = 12, beam.size = 1)
+#' best.interval(dtrain = dtrain, dtest = dtest, box = box, depth = "cv", beam.size = 1)
 #'
 #'
 #' dx <- bi_test[, 1:4]
@@ -50,8 +53,7 @@
 #' sort(dx[, 3], decreasing = TRUE)[5:6]
 #'
 #' best.interval(list(dx, dy), box = box, depth = 3, beam.size = 1)$box
-#' best.interval(list(dx, dy), box = box, depth = 3, beam.size = 1, add.iter = 3)$box # clear difference in the third dimension
-#' best.interval(list(dx, dy), box = box, depth = 3, beam.size = 4)$box               # clear difference in the third dimension
+#' best.interval(list(dx, dy), box = box, depth = 3, beam.size = 4)$box               # clear difference in the fourth dimension
 #'
 #' best.interval(list(dx, dy), box = box, depth = 4, beam.size = 4)$box
 #' norm.prim.w(list(dx, dy), box = box, peel.alpha = 0.05)$box
@@ -59,7 +61,23 @@
 
 
 best.interval <- function(dtrain, dtest = NULL, box, depth = 5, beam.size = 1,
-                          add.iter = 0, keep = 10){
+                          keep = 10, denom = 6){
+
+  nc <- ncol(dtrain[[1]])
+
+  if(depth == "cv"){
+    depth = -(seq(-nc, -1, by = ceiling(nc/denom)))
+  }
+
+  if(length(depth) > 1){
+    depth <- select.depth(dtrain = dtrain, box = box, depth = depth,
+                          beam.size = beam.size,
+                          keep = keep)
+  }
+
+  if(depth == "all"){
+    features <- nc
+  }
 
   # numbers below correspond to row numbers in Algorithm 3 in the reference
 
@@ -154,7 +172,10 @@ best.interval <- function(dtrain, dtest = NULL, box, depth = 5, beam.size = 1,
   }
 
   if(depth > 1){
-    for(j in 1:(depth - 1)){
+    add.iter = depth + 50
+    while(add.iter > 0){
+      add.iter <- add.iter - 1
+    # start external for loop
       if(nrow(res.tab) > beam.size){
         retain <- which(res.tab[, 1] >= sort(res.tab[, 1], decreasing = TRUE)[beam.size])
         res.tab <- res.tab[retain, ]
@@ -169,46 +190,12 @@ best.interval <- function(dtrain, dtest = NULL, box, depth = 5, beam.size = 1,
         res.tab <- res.tab[1:min(length(res.box), max(keep, beam.size)), ]
         res.box <- res.box[1:min(length(res.box), max(keep, beam.size))]
       }
-      for(k in 1:nrow(res.tab)){
-        if(res.tab[k, 2] == 1){
-          res.tab[k, 2] <- 0
-          inds.r <- dims[!(dims %in% res.tab[k, 3])]
-          for(i in inds.r){
-            tmp <- refine(dtrain[[1]], dtrain[[2]], res.box[[k]], i, res.tab[k, 1])
-            if(tmp[[3]] == 1){
-              res.box <- c(res.box, list(tmp[[1]]))
-              res.tab <- rbind(res.tab, c(tmp[[2]], tmp[[3]], i))
-            }
-          }
-        }
-      }
-
-    }
-  }
-
-  #### additionally refine already refined dimensions while staying within depth limit
-
-  if(add.iter > 0){
-    if(nrow(res.tab) > beam.size){
-      retain <- which(res.tab[, 1] >= sort(res.tab[, 1], decreasing = TRUE)[beam.size])
-      res.tab <- res.tab[retain, ]
-      res.box <- res.box[retain]
-      if(length(res.box) > beam.size){
-        inds <- get.dup.boxes(res.box)
-        if(length(inds) > 0){
-          res.tab <- res.tab[-inds, ]
-          res.box <- res.box[-inds]
-        }
-      }
-      res.tab <- res.tab[1:min(length(res.box), max(keep, beam.size)), ]
-      res.box <- res.box[1:min(length(res.box), max(keep, beam.size))]
-    }
-    while(add.iter > 0 & sum(res.tab[, 2]) > 0){
-      add.iter <- add.iter - 1
+      if(sum(res.tab[, 2]) == 0) add.iter <- 0                            # if there is nothing to refine, exit the cycle
       for(k in 1:nrow(res.tab)){
         if(res.tab[k, 2] == 1){
           res.tab[k, 2] <- 0
           inds.r <- dims[apply(abs(box - res.box[[k]]), 2, sum) != 0]
+          if(length(inds.r) < depth) inds.r <- dims
           inds.r <- inds.r[!(inds.r %in% res.tab[k, 3])]
           for(i in inds.r){
             tmp <- refine(dtrain[[1]], dtrain[[2]], res.box[[k]], i, res.tab[k, 1])
@@ -219,20 +206,7 @@ best.interval <- function(dtrain, dtest = NULL, box, depth = 5, beam.size = 1,
           }
         }
       }
-      if(nrow(res.tab) > beam.size){
-        retain <- which(res.tab[, 1] >= sort(res.tab[, 1], decreasing = TRUE)[beam.size])
-        res.tab <- res.tab[retain, ]
-        res.box <- res.box[retain]
-        if(length(res.box) > beam.size){
-          inds <- get.dup.boxes(res.box)
-          if(length(inds) > 0){
-            res.tab <- res.tab[-inds, ]
-            res.box <- res.box[-inds]
-          }
-        }
-        res.tab <- res.tab[1:min(length(res.box), max(keep, beam.size)), ]
-        res.box <- res.box[1:min(length(res.box), max(keep, beam.size))]
-      }
+    # end external for loop
     }
   }
 
@@ -243,7 +217,7 @@ best.interval <- function(dtrain, dtest = NULL, box, depth = 5, beam.size = 1,
     qtest <- qual.wracc(dtest, box)
   }
 
-  return(list(qtest = qtest, qtrain = res.tab[winner, 1], box = box))
+  return(list(qtest = qtest, qtrain = res.tab[winner, 1], box = box, depth = depth))
 }
 
 

@@ -7,11 +7,14 @@
 #' @param dtest list, containing test data. Structured in the same way as \code{dtrain}
 #' @param box hyperbox, covering data
 #' @param features character or integer. Refers to the number of features used in each iteration.
-#' If integer, defines this number.
-#' If "some", calculated as \code{ceiling(sqrt(ncol(dtrain[[1]])))},
+#' If integer, defines this number;
+#' if "some", calculated as \code{ceiling(sqrt(ncol(dtrain[[1]])))};
 #' if "all", all features are used. Default is "some"
-#' @param iter integer. The number of iterations (sequences of boxes learned). Default is 50
+#' if "cv", is chosen automatically from a set defined by \code{ncol(dtrain[[1]])} and \code{denom}
+#' parameter
+#' @param iter integer. The number of iterations (sequences of boxes learned). Default is 30
 #' @param minpts integer. Minimal number of points in the box for PRIM to continue peeling
+#' @param denom the maximal length of the set of \code{features} values to choose from
 #'
 #' @keywords models, multivariate
 #'
@@ -47,7 +50,7 @@
 #' res <- norm.prim(dtrain = dtrain, dtest = dtest, box = box)
 #' set.seed(1)
 #' res.bag <- bagging.prim(dtrain = dtrain, dtest = dtest, box = box)
-#' res.bag.all <- bagging.prim(dtrain = dtrain, dtest = dtest, box = box, features = "all)
+#' res.bag.all <- bagging.prim(dtrain = dtrain, dtest = dtest, box = box, features = "all")
 #' res.bag.cv <- bagging.prim(dtrain = dtrain, dtest = dtest, box = box, features = "cv", peel.alpha = c(0.05, 0.1, 0.15))
 #'
 #' plot(res[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
@@ -67,19 +70,22 @@
 
 
 bagging.prim <- function(dtrain, dtest, deval = dtrain, box, minpts = 20, peel.alpha = 0.05,
-                         features = "some", iter = 30, denom = 5){
+                         features = "some", iter = 50, denom = 5){
 
   nc <- ncol(dtrain[[1]])
+
+  if(length(peel.alpha) > 1){
+    peel.alpha <- select.alpha(dtrain = dtrain, box = box, minpts = minpts,
+                               peel.alpha = peel.alpha)
+  }
 
   if(features == "cv"){
     features = -(seq(-nc, -1, by = ceiling(nc/denom)))
   }
 
-  if(length(peel.alpha) > 1 | length(features) > 1){
-    tmp <- select.param(dtrain = dtrain, box = box, minpts = minpts,
-                               peel.alpha = peel.alpha, features = features, iter = iter)
-    features = tmp[2]
-    peel.alpha = tmp[1]
+  if(length(features) > 1){
+    features <- select.param(dtrain = dtrain, box = box, minpts = minpts,
+                               peel.alpha = peel.alpha, features = features, iter = iter)[2]
   }
 
   if(is.na(features) || is.null(features)){

@@ -135,7 +135,7 @@ norm.prim.w <- function(dtrain, dtest = NULL, box, max.peels = 999,
     qtest <- qual.wracc(dtest, box)
   }
 
-  return(list(qtest = qtest, qtrain = qtrain[ret], box = box))
+  return(list(qtest = qtest, qtrain = qtrain[ret], box = box, peel.alpha = peel.alpha))
 }
 
 

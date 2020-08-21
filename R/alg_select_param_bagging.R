@@ -1,20 +1,27 @@
-#' optimization of peel.alpha with AUpC
+#' optimization of peel.alpha and features with AUpC
 #'
-#' The function chooses one alpha value out of a given set using cross validation
-#' and AUpC as a quality measure
+#' The function chooses one peel.alpha value and one value of number of features
+#' out of given sets for prim with bagging algorithm
+#' using cross validation and AUpC as a quality measure
 #'
 #' @param dtrain list, containing training data. The first element contains matrix/data frame of real attribute values.
 #' the second element contains vector of labels 0/1.
 #' @param box matrix of real. Initial hyperbox, covering data
 #' @param minpts integer. Minimal number of points in the box for PRIM to continue peeling
-#' @param max.peels integer. Maximum length of the peeling trajectory (number of boxes)
-#' @param peel.alpha a set of real. The peeling parameters of PRIM to test from the interval (0,1)
-#' @param threshold real. If precision of the current box on \code{test}
-#' is greater or equal \code{threshold}, PRIM stops peeling
+#' @param peel.alpha real or a set of real. The peeling parameters of PRIM to test from the interval (0,1)
+#' @param features character, integer, a set of characters or integers.
+#' Refers to the number of features used in each iteration.
+#' If integer, defines this number.
+#' If "some", calculated as \code{ceiling(sqrt(ncol(dtrain[[1]])))},
+#' if "all", all features are used. Default is "some"
+#' @param iter integer. The number of iterations (sequences of boxes learned). Default is 30
+#'
 #'
 #' @return the optimal value of the peeling parameter from the set
 #'
 #' @export
+#'
+#' @seealso \code{\link{bagging.prim}},
 #'
 #' @examples
 #'
@@ -25,7 +32,7 @@
 #' 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
 #'
 #' res <- select.param(dtrain = dtrain, box = box, minpts = 20,
-#' peel.alpha = c(0.17, 0.19), iter = 20, features = c(1,4,12))
+#' peel.alpha = c(0.17), iter = 20, features = c(1,4,12))
 
 
 select.param <- function(dtrain, box, minpts = 20, peel.alpha, features, iter = 50){
