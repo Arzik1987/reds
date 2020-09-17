@@ -8,7 +8,7 @@ best.interval(
   dtrain,
   dtest = NULL,
   box,
-  depth = 5,
+  depth = "all",
   beam.size = 1,
   keep = 10,
   denom = 6

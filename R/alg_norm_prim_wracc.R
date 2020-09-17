@@ -100,7 +100,10 @@ norm.prim.w <- function(dtrain, dtest = NULL, box, max.peels = 999,
     y <<- y[inds]
     box[rn, cn] <<- bnd
     q <<- hgh
-    continue.peeling <<- ((sum(inds)/length(inds)) < 1 & hgh < threshold)
+    if(hgh > maxq){
+      maxq <<- hgh
+    }
+    continue.peeling <<- ((sum(inds)/length(inds)) < 1)
   }
 
   x <- dtrain[[1]]

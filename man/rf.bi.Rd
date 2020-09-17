@@ -11,8 +11,9 @@ rf.bi(
   depth = "all",
   beam.size = 1,
   keep = 10,
-  denom = 5,
-  npts = 10000
+  denom = 6,
+  npts = 10000,
+  labels = FALSE
 )
 }
 \arguments{

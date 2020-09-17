@@ -11,9 +11,9 @@ bagging.prim(
   box,
   minpts = 20,
   peel.alpha = 0.05,
-  features = "some",
+  features = "all",
   iter = 50,
-  denom = 5
+  denom = 6
 )
 }
 \arguments{

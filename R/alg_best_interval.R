@@ -60,7 +60,7 @@
 #' norm.prim.w(list(dx, dy), box = box, peel.alpha = 0.1)$box
 
 
-best.interval <- function(dtrain, dtest = NULL, box, depth = 5, beam.size = 1,
+best.interval <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
                           keep = 10, denom = 6){
 
   nc <- ncol(dtrain[[1]])
@@ -71,13 +71,22 @@ best.interval <- function(dtrain, dtest = NULL, box, depth = 5, beam.size = 1,
 
   if(length(depth) > 1){
     depth <- select.depth(dtrain = dtrain, box = box, depth = depth,
-                          beam.size = beam.size,
-                          keep = keep)
+                          beam.size = beam.size, keep = keep)
   }
 
   if(depth == "all"){
-    features <- nc
+    depth <- nc
   }
+
+  if(depth > nc){
+    warning("Restricting depth parameter to the number of atributes in data!")
+    depth <- nc
+  }
+
+  if((min(dtrain[[2]]) < 0) | (max(dtrain[[2]]) > 1)){
+    warning("The target variable takes values from outside [0,1]. Just making sure you are aware of it")
+  }
+
 
   # numbers below correspond to row numbers in Algorithm 3 in the reference
 
@@ -150,16 +159,6 @@ best.interval <- function(dtrain, dtest = NULL, box, depth = 5, beam.size = 1,
 
   #### end functions ####
 
-
-  if((min(dtrain[[2]]) < 0) | (max(dtrain[[2]]) > 1)){
-    warning("The target variable takes values from outside [0,1]. Just making sure you are aware of it")
-  }
-
-  dim <- ncol(dtrain[[1]])
-  if(depth > dim){
-    warning("Restricting depth parameter to the number of atributes in data!")
-    depth <- dim
-  }
 
   dims <- 1:ncol(dtrain[[1]])
   res.box <- list()

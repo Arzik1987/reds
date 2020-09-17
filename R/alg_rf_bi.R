@@ -51,10 +51,11 @@
 #' set.seed(1)
 #' res.rf <- rf.bi(dtrain = dtrain, dtest = dtest, box = box)
 #' res <- best.interval(dtrain = dtrain, dtest = dtest, box = box, depth = 5)
+#' res.rf.c <- rf.bi(dtrain = dtrain, dtest = dtest, box = box, depth = "cv")
 
 
 rf.bi <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
-                    keep = 10, denom = 5, npts = 10000){
+                    keep = 10, denom = 6, npts = 10000, labels = FALSE){
 
   nc <- ncol(dtrain[[1]])
 
@@ -68,7 +69,7 @@ rf.bi <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
   }
 
   if(depth == "all"){
-    features <- nc
+    depth <- nc
   }
 
   dp <- list()
@@ -82,7 +83,12 @@ rf.bi <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
   res.rf <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]), method = "rf")
   print("finished with training RF")
 
-  dp[[2]] <- predict(res.rf, dp[[1]], type = "prob")[, 2]
+  if(labels){
+    dp[[2]] <- as.numeric(as.character(predict(res.rf, dp[[1]])))
+  } else {
+    dp[[2]] <- predict(res.rf, dp[[1]], type = "prob")[, 2]
+  }
+
   temp <- best.interval(dtrain = dp, dtest = dtest, box = box, depth = depth,
                         beam.size = beam.size, keep = keep)
 

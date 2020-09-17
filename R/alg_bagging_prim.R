@@ -70,7 +70,7 @@
 
 
 bagging.prim <- function(dtrain, dtest, deval = dtrain, box, minpts = 20, peel.alpha = 0.05,
-                         features = "some", iter = 50, denom = 5){
+                         features = "all", iter = 50, denom = 6){
 
   nc <- ncol(dtrain[[1]])
 

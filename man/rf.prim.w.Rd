@@ -64,6 +64,8 @@ box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
 set.seed(1)
 res.rf <- rf.prim.w(dtrain = dtrain, dtest = dtest, box = box)
 res <- norm.prim.w(dtrain = dtrain, dtest = dtest, box = box)
+res.cv <- norm.prim.w(dtrain = dtrain, dtest = dtest, box = box,
+peel.alpha = c(0.03, 0.05, 0.07, 0.1, 0.13, 0.16, 0.2))
 }
 \seealso{
 \code{\link{norm.prim}},
