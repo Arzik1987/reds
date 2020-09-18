@@ -2,3 +2,5 @@
 .Rhistory
 .RData
 legacy/
+next_release/
+man/

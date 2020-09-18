@@ -1,9 +1,9 @@
-Package: primre
-Title: Pedagogical Rule Extraction with PRIM
+Package: reds
+Title: Pedagogical Rule Extraction with Subgroup Discovery
 Version: 0.12
 Author: Vadim Arzamasov <vadim.arzamasov@gmail.com>
 Maintainer: Vadim Arzamasov <vadim.arzamasov@gmail.com>
-Description: PRIM for bump hunting in high-dimensional data with intermediate step of labeling more points with random forest.
+Description: Subgroup discovery with intermediate step of labeling more points with random forest.
 Depends: R (>= 3.5.0)
 Imports:
     lhs,

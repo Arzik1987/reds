@@ -5,13 +5,23 @@
 #'
 #' @param dtrain list, containing training data. The first element contains matrix/data frame of real attribute values.
 #' the second element contains vector of labels 0/1.
-#' @param dtest list, containing test data. Structured in the same way as \code{dtrain}
+#' @param dtest list, containing test data. Structured in the same way as \code{dtrain}. If NULL, the
+#' quality metrics on test data are not computed
+#' @param deval list, containing data for evaluation. Structured in the same way as \code{dtrain}.
+#' By default coincides with \code{dtrain}
 #' @param box matrix of real. Initial hyperbox, covering data
-#' @param peel.alpha real. The peeling parameter of PRIM from the interval (0,1)
+#' @param minpts integer. Minimal number of points in the box for PRIM to continue peeling
+#' @param max.peels integer. Maximum length of the peeling trajectory (number of boxes)
+#' @param peel.alpha a set of real. The peeling parameter(s) of PRIM from the interval (0,1).
+#' If a vector, the value is selected with \code{\link{select.alpha}} algorithm with \code{dtrain}
+#' @param threshold real. If precision of the current box on the newly
+#' generated dataset is greater or equal \code{threshold}, PRIM stops peeling
 #' @param npts number of points to be generated and labeled
 #' @param minpts integer. Minimal number of points in the box for PRIM to continue peeling
 #' @param grow.deep logical. If true, criterion \code{minpts} is applied to the newly
-#' generated dataset, not to the initial one
+#' generated dataset, not to \code{deval}
+#' @param seed seed for reproducibility of hyperparameter optimization procedure.
+#' Default is 2020. Set NULL for not using
 #'
 #' @keywords models, multivariate
 #'
@@ -29,12 +39,13 @@
 #' when the new data is labelled with 0/1
 #' \item \code{tune.par} the best hyperparameter value(s) for random forest, produced with
 #' the default settings of function \code{train} from 'caret' package.
+#' \item \code{peel.alpha} integer; the value of \code{peel.alpha} parameter used
 #' }
 #'
 #' @importFrom stats predict
 #'
 #' @seealso \code{\link{norm.prim}},
-#' \code{\link{bagging.prim}}
+#' \code{\link{bumping.prim}}
 #'
 #' @export
 #'
@@ -48,8 +59,7 @@
 #' box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
 #' 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
 #'
-#' set.seed(1)
-#' res.rf <- rf.prim(dtrain = dtrain, dtest = dtest, box = box, grow.deep = TRUE)
+#' res.rf <- rf.prim(dtrain = dtrain, dtest = dtest, box = box)
 #' res <- norm.prim(dtrain = dtrain, dtest = dtest, box = box)
 #'
 #' plot(res.rf[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
@@ -60,11 +70,10 @@
 #' col = c("black", "red", "blue"), lty = c(1, 1, 1))
 #'
 #'
-#' set.seed(1)
 #' res.rf <- rf.prim(dtrain = dtrain, dtest = dtest, box = box,
-#' peel.alpha = c(0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19))
+#' peel.alpha = c(0.03, 0.05, 0.07, 0.10, 0.13, 0.16, 0.2))
 #' res <- norm.prim(dtrain = dtrain, dtest = dtest, box = box,
-#' peel.alpha = c(0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19))
+#' peel.alpha = c(0.03, 0.05, 0.07, 0.10, 0.13, 0.16, 0.2))
 #'
 #' plot(res.rf[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
 #' xlab = "recall", ylab = "precision")
@@ -74,12 +83,17 @@
 #' col = c("black", "red", "blue"), lty = c(1, 1, 1))
 
 
-rf.prim <- function(dtrain, dtest, box, peel.alpha = 0.05,
-                    npts = 100000, minpts = 20, grow.deep = FALSE){
+rf.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.peels = 999,
+                    peel.alpha = 0.05, threshold = 1, npts = 100000, grow.deep = FALSE, seed = 2020){
 
   if(length(peel.alpha) > 1){
-    peel.alpha <- select.alpha(dtrain = dtrain, box = box, peel.alpha = peel.alpha)
-  }
+    peel.alpha <- select.alpha(dtrain = dtrain, box = box, minpts = minpts,
+                               max.peels = max.peels, peel.alpha = peel.alpha,
+                               threshold = threshold, seed = seed)
+    print("finished with selecting peel.alpha")
+    }
+
+  set.seed(seed = seed)
 
   dim <- ncol(dtrain[[1]])
   dp <- list()
@@ -95,9 +109,9 @@ rf.prim <- function(dtrain, dtest, box, peel.alpha = 0.05,
 
   dp[[2]] <- predict(res.rf, dp[[1]], type = "prob")[, 2]
   if(grow.deep){
-    dtrain = dp
+    deval = dp
   }
-  temp <- norm.prim(dtrain = dp, dtest = dtest, deval = dtrain, box = box,
+  temp <- norm.prim(dtrain = dp, dtest = dtest, deval = deval, box = box,
                     minpts = minpts, peel.alpha = peel.alpha)
   pr.prob <- temp$pr.test
   boxes.prob <- temp$boxes
@@ -108,7 +122,8 @@ rf.prim <- function(dtrain, dtest, box, peel.alpha = 0.05,
     dtrain = dp
   }
   temp <- norm.prim(dtrain = dp, dtest = dtest, deval = dtrain, box = box,
-                    minpts = minpts, peel.alpha = peel.alpha)
+                    minpts = minpts, max.peels = max.peels, peel.alpha = peel.alpha,
+                    threshold = threshold)
   pr.pred <- temp$pr.test
   boxes.pred <- temp$boxes
 

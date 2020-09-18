@@ -2,8 +2,8 @@
 #'
 #' A dataset containing the results of DSGC (Decentral Smart Grid Control) simulations for
 #' symmetric star 5-node system with inflrxible producer
-#' in the center. Three inputs for each of four consumers are varied: tau -- the reaction time, from [0.5, 5];
-#' T -- averaging time, from [1, 4]; g -- 'price elasticity of demand', from [0.05, 1]. The points
+#' in the center. Three inputs for each of four consumers are varied: tau -- the reaction time, from [0.5,5];
+#' T -- averaging time, from [1,4]; g -- 'price elasticity of demand', from [0.05,1]. The points
 #' are sampled from design space according to Halton sequence.
 #'
 #' @format dsgc_sym is a matrix with 13 columns and 10000 rows. each row corresponds to a separate simulation.
@@ -26,7 +26,8 @@
 
 #' Dataset for testing BestInterval algorithm
 #'
-#' @format bi_test is a matrix with 5 columns and 1000 rows. First 4 columns are attributes; the last column - label
+#' @format bi_test is a matrix with 5 columns and 1000 rows. First 4 columns are attributes;
+#' the last column is binary label
 #'
 #' @usage data(bi_test)
 "bi_test"

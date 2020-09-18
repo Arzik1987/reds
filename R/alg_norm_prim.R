@@ -4,17 +4,21 @@
 #'
 #' @param dtrain list, containing training data. The first element contains matrix/data frame of real attribute values.
 #' the second element contains vector of labels 0/1.
-#' @param dtest list, containing test data. Structured in the same way as \code{dtrain}
+#' @param dtest list, containing test data. Structured in the same way as \code{dtrain}. If NULL, the
+#' quality metrics on test data are not computed
 #' @param deval list, containing data for evaluation. Structured in the same way as \code{dtrain}.
 #' By default coincides with \code{dtrain}
 #' @param box matrix of real. Initial hyperbox, covering data
 #' @param minpts integer. Minimal number of points in the box for PRIM to continue peeling
 #' @param max.peels integer. Maximum length of the peeling trajectory (number of boxes)
-#' @param peel.alpha a set of real. The peeling parameter of PRIM from the interval (0,1)
-#' @param pasting logical. Whether pasting is used on each box forming the peeling trajectory
+#' @param peel.alpha a set of real. The peeling parameter(s) of PRIM from the interval (0,1).
+#' If a vector, the value is selected with \code{\link{select.alpha}} algorithm
+#' @param pasting logical. If  TRUE, pasting is used on each box forming the peeling trajectory
 #' @param paste.alpha real. The pasting parameter of PRIM from the interval (0,1)
-#' @param threshold real. If precision of the current box on \code{test}
+#' @param threshold real. If precision of the current box on \code{train}
 #' is greater or equal \code{threshold}, PRIM stops peeling
+#' @param seed seed for reproducibility of hyperparameter optimization procedure.
+#' Default is 2020. Set NULL for not using
 #'
 #' @keywords models, multivariate
 #'
@@ -28,12 +32,13 @@
 #' \item \code{pr.eval} matrix with coverage (recall) in the first column and
 #' density (precision) in the second column, evaluated on \code{deval}
 #' \item \code{boxes} list of matrices defining boxes constituting peeling trajectory
+#' \item \code{peel.alpha} integer; the value of \code{peel.alpha} parameter used
 #' }
 #'
 #' @importFrom stats quantile
 #'
 #' @seealso \code{\link{rf.prim}},
-#' \code{\link{bagging.prim}}
+#' \code{\link{bumping.prim}}
 #'
 #' @export
 #'
@@ -47,23 +52,27 @@
 #' box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
 #' 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
 #'
-#' set.seed(1)
 #' res1 <- norm.prim(dtrain = dtrain, dtest = dtest, box = box)
 #' res2 <- norm.prim(dtrain = dtrain, dtest = dtest, box = box, pasting = TRUE)
 #' res3 <- norm.prim(dtrain = dtrain, dtest = dtest, box = box,
-#' peel.alpha = c(0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19))
+#' peel.alpha = c(0.03, 0.05, 0.07, 0.10, 0.13, 0.16, 0.2))
 #'
-#' plot(res3[[1]], col = "green", type = "l")
+#' plot(res3[[1]], col = "green", type = "l",
+#' xlab = "recall", ylab = "precision")
 #' lines(res2[[1]], col = "blue")
 #' lines(res1[[1]], col = "brown")
+#' legend("bottomleft", legend = c("prim.cv", "prim.pasting", "prim"),
+#' col = c("green", "blue", "brown"), lty = c(1, 1, 1))
 
 
 norm.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.peels = 999,
-                     peel.alpha = 0.05, pasting = FALSE, paste.alpha = 0.01, threshold = 1){
+                     peel.alpha = 0.05, pasting = FALSE, paste.alpha = 0.01, threshold = 1,
+                     seed = 2020){
 
   if(length(peel.alpha) > 1){
     peel.alpha <- select.alpha(dtrain = dtrain, box = box, minpts = minpts,
-                               max.peels = max.peels, peel.alpha = peel.alpha, threshold = threshold)
+                               max.peels = max.peels, peel.alpha = peel.alpha,
+                               threshold = threshold, seed = seed)
   }
 
   peel <- function(){
@@ -98,7 +107,7 @@ norm.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, ma
         bnd = bound
       }
     }
-    x <<- x[inds,]
+    x <<- x[inds,, drop = FALSE]
     y <<- y[inds]
     box[rn, cn] <<- bnd
     continue.peeling <<- ((sum(inds)/length(inds)) < 1 & hgh < threshold)

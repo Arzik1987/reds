@@ -7,13 +7,18 @@
 #' @param dtest list, containing test data. Structured in the same way as \code{dtrain}. If NULL, the
 #' WRAcc on test data is not computed
 #' @param box matrix of real. Initial hyperbox, covering data
-#' @param depth integer or "cv". The maximal number of dimensions restricted.
-#' If "cv", \code{depth} is chosen automatically with 5-fild cross-validation
-#' from a set defined by \code{ncol(dtrain[[1]])} and \code{denom} parameter
+#' @param depth integer, vector of integers, "cv" or "all"; parameter specifying
+#' the search depth (the number of restricted attributes). If "all", the full data
+#' dimensionality is used; if a vector, the value is selected with
+#' \code{\link{select.depth}} algorithm; if "cv" a vector of maximum \code{denom}
+#' equidistant values is created and a single value is selected with
+#' \code{\link{select.depth}} algorithm.
 #' @param beam.size integer.The size of the beam in the beam search
 #' @param keep integer. If greater than \code{beam.size}, specifies the maximum
 #' number of boxes to be refined at each iteration in case all have equal WRAcc
-#' @param denom the maximal length of the set of \code{features} values to choose from
+#' @param denom the maximal length of the set of \code{depth} values to choose from
+#' @param seed seed for reproducibility of hyperparameter optimization procedure.
+#' Default is 2020. Set NULL for not using
 #'
 #' @keywords models, multivariate
 #'
@@ -22,56 +27,52 @@
 #'
 #' @return list.
 #' \itemize{
-#' \item \code{qtest} WRAcc value computed from \code{dtest}
-#' \item \code{qtrain} WRAcc value computed from \code{dtrain}
+#' \item \code{qtest} WRAcc measure of the found subgroup evaluated on \code{dtest}
+#' \item \code{qtrain} WRAcc measure of the found subgroup evaluated on \code{dtrain}
 #' \item \code{box} the hyperbox, with highest value of WRAcc on \code{dtrain}
+#' \item \code{depth} integer; the value of \code{depth} parameter used
 #' }
 #'
-#' @seealso \code{\link{norm.prim.w}}
+#' @seealso \code{\link{rf.bi}}
 #'
 #' @export
 #'
 #' @examples
 #'
 #' dtrain <- dtest <- list()
-#' dtest[[1]] <- dsgc_sym[1001:10000, 1:12]
-#' dtest[[2]] <- dsgc_sym[1001:10000, 13]
-#' dtrain[[1]] <- dsgc_sym[1:1000, 1:12]
-#' dtrain[[2]] <- dsgc_sym[1:1000, 13]
+#' dtest[[1]] <- dsgc_sym[1:9500, 1:12]
+#' dtest[[2]] <- dsgc_sym[1:9500, 13]
+#' dtrain[[1]] <- dsgc_sym[9501:10000, 1:12]
+#' dtrain[[2]] <- dsgc_sym[9501:10000, 13]
 #' box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
 #' 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
 #'
-#' norm.prim.w(dtrain = dtrain, dtest = dtest, box = box, peel.alpha = 0.05)
-#' norm.prim.w(dtrain = dtrain, dtest = dtest, box = box, peel.alpha = c(0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19))
-#' best.interval(dtrain = dtrain, dtest = dtest, box = box, depth = 12, beam.size = 1)
-#' best.interval(dtrain = dtrain, dtest = dtest, box = box, depth = "cv", beam.size = 1)
+#' best.interval(dtrain = dtrain, dtest = dtest, box = box, depth = "all")
+#' best.interval(dtrain = dtrain, dtest = dtest, box = box, depth = "cv", denom = 2)
 #'
 #'
 #' dx <- bi_test[, 1:4]
 #' dy <- bi_test[, 5]
 #' box = matrix(c(0,0,0,0,1,2,1,1), nrow = 2, byrow = TRUE)
-#' sort(dx[, 3], decreasing = TRUE)[5:6]
 #'
+#' # clear difference in the fourth dimension
 #' best.interval(list(dx, dy), box = box, depth = 3, beam.size = 1)$box
-#' best.interval(list(dx, dy), box = box, depth = 3, beam.size = 4)$box               # clear difference in the fourth dimension
-#'
-#' best.interval(list(dx, dy), box = box, depth = 4, beam.size = 4)$box
-#' norm.prim.w(list(dx, dy), box = box, peel.alpha = 0.05)$box
-#' norm.prim.w(list(dx, dy), box = box, peel.alpha = 0.1)$box
+#' best.interval(list(dx, dy), box = box, depth = 3, beam.size = 4)$box
+#' best.interval(list(dx, dy), box = box, depth = 4, beam.size = 1)$box
 
 
 best.interval <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
-                          keep = 10, denom = 6){
+                          keep = 10, denom = 6, seed = 2020){
 
   nc <- ncol(dtrain[[1]])
 
-  if(depth == "cv"){
+  if(depth[1] == "cv"){
     depth = -(seq(-nc, -1, by = ceiling(nc/denom)))
   }
 
   if(length(depth) > 1){
     depth <- select.depth(dtrain = dtrain, box = box, depth = depth,
-                          beam.size = beam.size, keep = keep)
+                          beam.size = beam.size, keep = keep, seed = seed)
   }
 
   if(depth == "all"){
@@ -87,15 +88,13 @@ best.interval <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 
     warning("The target variable takes values from outside [0,1]. Just making sure you are aware of it")
   }
 
-
-  # numbers below correspond to row numbers in Algorithm 3 in the reference
-
   # local function to assess WRAcc quality metric
   wracc <- function(n, np, N, Np){
     (n/N)*(np/n - Np/N)
   }
 
   # refine a single dimension of the box
+  # numbers below correspond to row numbers in Algorithm 3 in the reference
   refine <- function(dx, dy, box, ind, start.q){
 
     N <- length(dy)
@@ -218,65 +217,4 @@ best.interval <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 
 
   return(list(qtest = qtest, qtrain = res.tab[winner, 1], box = box, depth = depth))
 }
-
-
-
-
-
-# #### TEST
-#
-# dx <- bi_test[, 1:4]
-# dy <- bi_test[, 5]
-#
-# matrix(c(apply(dx, 2, min), apply(dx, 2, max)), ncol = dim, byrow = TRUE)
-# sort(dx[, 3], decreasing = TRUE)[5:6]
-#
-# best.interval(list(dx, dy), depth = 3, beam.size = 1)$box
-# best.interval(list(dx, dy), depth = 3, beam.size = 1, add.iter = 3)$box # clear difference in the third dimension
-# best.interval(list(dx, dy), depth = 3, beam.size = 4)$box               # clear difference in the third dimension
-#
-#
-# # runtime tests
-#
-# library(microbenchmark)
-#
-# set.seed(3)
-# dx = matrix(runif(400), ncol = 4)
-# dy = (apply(dx < 0.7, 1, sum) == 4) - 0
-# dx[, 1] = dx[, 1]*2
-# microbenchmark(best.interval(list(dx, dy), depth = 4)) # mean 19.17006 ms
-#
-#
-# tm <- numeric()
-# for(i in 1:10){
-#   print(i)
-#   dx = matrix(runif(400*i), ncol = 4)
-#   dy = (apply(dx < 0.5^0.25, 1, sum) == 4) - 0
-#   dx[, 1] = dx[, 1]*2
-#   tm <- c(tm, summary(microbenchmark(best.interval(list(dx, dy), depth = 4), times = 10))$mean)
-# }
-# plot((1:10)*100, tm)
-#
-#
-# tm <- numeric()
-# for(i in 1:10){
-#   print(i)
-#   dx = matrix(runif(100*i), ncol = i)
-#   dy = (apply(dx < 0.5^(1/i), 1, sum) == i) - 0
-#   dx[, 1] = dx[, 1]*2
-#   tm <- c(tm, summary(microbenchmark(best.interval(list(dx, dy), depth = 1), times = 50))$mean)
-# }
-# plot((1:10), tm)
-#
-#
-# tm <- numeric()
-# for(i in 1:10){
-#   print(i)
-#   dx = matrix(runif(100*i), ncol = i)
-#   dy = (apply(dx < 0.5^(1/i), 1, sum) == i) - 0
-#   dx[, 1] = dx[, 1]*2
-#   tm <- c(tm, summary(microbenchmark(best.interval(list(dx, dy), depth = i), times = 20))$mean)
-# }
-# plot((1:10), tm)
-
 

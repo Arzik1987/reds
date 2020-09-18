@@ -1,6 +1,6 @@
 #' WRAcc measure of the box
 #'
-#' The function calculates the WRAcc of the box using a given data
+#' The function calculates the Weighted Relative Accuracy (WRAcc) of the box using a given data
 #'
 #' @param d list containing the data. The first element contains matrix/data frame of real attribute values.
 #' the second element contains vector of labels 0/1.
