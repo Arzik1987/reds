@@ -103,7 +103,10 @@ rf.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.
     dp[[1]][, i] <- dp[[1]][, i]*d.width + box[1, i]
   }
 
-  colnames(dtrain[[1]]) <- colnames(dtest[[1]]) <- colnames(dp[[1]]) <- paste0("x", paste0(1:dim))
+  colnames(dtrain[[1]]) <- colnames(dp[[1]]) <- paste0("x", paste0(1:dim))
+  if(!is.null(dtest)){
+    colnames(dtest[[1]]) <- paste0("x", paste0(1:dim))
+  }
   res.rf <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]), method = "rf")
   print("finished with training RF")
 

@@ -61,6 +61,16 @@ rf.bi <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
                     keep = 10, denom = 6, npts = 10000, labels = FALSE, seed = 2020){
 
   nc <- ncol(dtrain[[1]])
+
+  if(depth[1] == "cv"){
+    depth = -(seq(-nc, -1, by = ceiling(nc/denom)))
+  }
+
+  if(length(depth) > 1){
+    depth <- select.depth(dtrain = dtrain, box = box, depth = depth,
+                          beam.size = beam.size, keep = keep, seed = seed)
+  }
+
   set.seed(seed = seed)
 
   dp <- list()
