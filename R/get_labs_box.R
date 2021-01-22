@@ -2,19 +2,19 @@
 #'
 #' The function samples points (if not provided) within a multi-dimensional hyperbox
 #' and labels them according to pre-specified DGP
-#' 
+#'
 #' @param box matrix of real, specifying the box, from which the points should be sampled. If null, the unit box is used
 #' @param n.points integer. Number of points to be sampled and labeled
-#' @param laths logical. If true, use \code{randomLHS} sampling, else use random sampling
+#' @param laths logical. If true, use \code{randomLHS} sampling, else use random sampling from multivariate triangular distribution
 #' @param pts matrix of real, containing examples to be labeled. Only active if use.pts is true.
-#' @param use.pts logical. If true, pre-spesified points \code{pts} are labeled, otherwize, new \code{n.points} 
+#' @param use.pts logical. If true, pre-spesified points \code{pts} are labeled, otherwize, new \code{n.points}
 #' points are sampled from the hyperbox \code{box}
-#' @param dgp character. Specifies the DGP to be used. 
+#' @param dgp character. Specifies the DGP to be used.
 #' \itemize{
-#' \item "ellipse" labels with 1 points inside 
+#' \item "ellipse" labels with 1 points inside
 #' an ellipse and with 0 otherwise.
 #' \item Values from "1" to "10" for synthetic processess described in [1].
-#' \item "borehole", "hart3", "hart4", "hart6sc", "ishigami", "linketal06dec", 
+#' \item "borehole", "hart3", "hart4", "hart6sc", "ishigami", "linketal06dec",
 #' "linketal06simple", "linketal06sin", "loepetal13", "moon10hd", "moon10hdc1", "moon10low", "morretal06",
 #' "oakoh04", "otlcircuit", "piston", "soblev99", "welchetal92", "willetal06", "wingweight" are the DGPs
 #' specified in [2].
@@ -22,26 +22,24 @@
 #' }
 #' @param ... parameters in the form \code{thr.x}, where \code{x} is one of possible \code{dgp} values.
 #' Threshold value for the \code{x}-th DGP. Used to convert real function output into binary.
-#' 
+#'
 #' @return list of two, containing a matrix of generated points and a vector of labels
-#' 
-#' @importFrom stats rbinom runif
-#' 
-#' @references [1] Dalal, S. et al. 2013. Improving scenario discovery using orthogonal rotations. 
+#'
+#' @references [1] Dalal, S. et al. 2013. Improving scenario discovery using orthogonal rotations.
 #' Environmental Modelling and Software. 48, (2013), 49-64.
-#' 
+#'
 #' [2] Surjanovic, S. & Bingham, D. (2013). Virtual Library of Simulation Experiments: Test Functions and Datasets.
-#' \url{http://www.sfu.ca/~ssurjano} 
-#' 
+#' \url{http://www.sfu.ca/~ssurjano}
+#'
 #' @export
-#' 
+#'
 #' @examples
 #' d <- get.labs.box(n.points = 100, dgp = "1")
 #' plot(d[[1]][, 1:2], col = d[[2]] + 1, pch = 20)
-#' 
+#'
 
 get.labs.box <- function(box = NULL, n.points = 0, laths = TRUE, pts = 0, use.pts = FALSE, dgp,
-                         thr.hart3 = -1, thr.hart6sc = 1, thr.sobol = 0.7, thr.ishigami = 1, 
+                         thr.hart3 = -1, thr.hart6sc = 1, thr.sobol = 0.7, thr.ishigami = 1,
                          thr.morris = 20, thr.otlcircuit = 4.5, thr.borehole = 1000,
                          thr.piston = 0.4, thr.wingweight = 250, thr.moon10hd = 0,
                          thr.moon10hdc1 = 0, thr.moon10low = 1.5, thr.welchetal92 = 0,
@@ -69,22 +67,30 @@ get.labs.box <- function(box = NULL, n.points = 0, laths = TRUE, pts = 0, use.pt
     res <- dgp9(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts)
   } else if(dgp == "10"){
     res <- dgp10(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts)
-  } 
-  
+  }
+
     else if(dgp == "hart3"){
     res <- dgp.hart3(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.hart3)
   } else if(dgp == "hart4"){
     res <- dgp.hart4(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.hart4)
   } else if(dgp == "hart6sc"){
     res <- dgp.hart6sc(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.hart6sc)
-  } 
-  
+  }
+
     else if(dgp == "sobol"){
     res <- dgp.sobol(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.sobol)
   } else if(dgp == "morris"){
     res <- dgp.morris(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.morris)
+  } else if(dgp == "morrisd1"){
+    res <- dgp.morrisd1(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.morris)
+  } else if(dgp == "morrisd2"){
+    res <- dgp.morrisd2(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.morris)
+  } else if(dgp == "morrisd3"){
+    res <- dgp.morrisd3(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.morris)
+  } else if(dgp == "morristr"){
+    res <- dgp.morris(box = box, n.points = n.points, laths = FALSE, thr = thr.morris)
   }
-  
+
     else if(dgp == "otlcircuit"){
     res <- dgp.otlcircuit(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.otlcircuit)
   } else if(dgp == "borehole"){
@@ -93,8 +99,8 @@ get.labs.box <- function(box = NULL, n.points = 0, laths = TRUE, pts = 0, use.pt
     res <- dgp.piston(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.piston)
   } else if(dgp == "wingweight"){
     res <- dgp.wingweight(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.wingweight)
-  } 
-  
+  }
+
     else if(dgp == "moon10hd"){
     res <- dgp.moon10hd(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.moon10hd)
   } else if(dgp == "moon10hdc1"){
@@ -103,8 +109,8 @@ get.labs.box <- function(box = NULL, n.points = 0, laths = TRUE, pts = 0, use.pt
     res <- dgp.moon10low(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.moon10low)
   } else if(dgp == "welchetal92"){
     res <- dgp.welchetal92(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.welchetal92)
-  } 
-  
+  }
+
     else if(dgp == "linketal06dec"){
     res <- dgp.linketal06dec(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.linketal06dec)
   } else if(dgp == "linketal06simple"){
@@ -117,8 +123,8 @@ get.labs.box <- function(box = NULL, n.points = 0, laths = TRUE, pts = 0, use.pt
     res <- dgp.morretal06(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.morretal06)
   } else if(dgp == "oakoh04"){
     res <- dgp.oakoh04(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.oakoh04)
-  } 
-  
+  }
+
     else if(dgp == "willetal06"){
     res <- dgp.willetal06(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.willetal06)
   } else if(dgp == "ishigami"){
@@ -126,11 +132,11 @@ get.labs.box <- function(box = NULL, n.points = 0, laths = TRUE, pts = 0, use.pt
   } else if(dgp == "soblev99"){
     res <- dgp.soblev99(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.soblev99)
   }
-  
+
     else if(dgp == "ellipse"){
     res <- dgp.ellipse(box = box, n.points = n.points, laths = laths, pts = pts, use.pts = use.pts, thr = thr.ellipse)
   }
-  
+
     else {
     stop("such DGP does not exist")
   }
@@ -144,7 +150,8 @@ get.data <- function(box, n.points, laths){
   if(laths){
     d <- lhs::randomLHS(n.points, ncol(box))
   } else {
-    d <- t(replicate(n.points, runif(ncol(box), 0, 1)))
+    # d <- t(replicate(n.points, runif(ncol(box), 0, 1)))
+    d <- t(replicate(n.points, EnvStats::rtri(ncol(box), 0, 1)))
   }
   for(i in 1:ncol(d)){
     d[, i] <- d[, i]*(box[2, i] - box[1, i]) + box[1, i]

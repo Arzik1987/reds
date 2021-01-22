@@ -1,4 +1,4 @@
-#' RF -> PRIM
+#' SVM -> PRIM
 #'
 #' The function learns RF model on a given dataset. Then it generates new points with latin hypercube sampling
 #' and labels them. These new points serve as input for PRIM algorithm.
@@ -59,31 +59,30 @@
 #' box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
 #' 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
 #'
-#' res.rf <- rf.prim(dtrain = dtrain, dtest = dtest, box = box)
+#' res.svm <- svm.prim(dtrain = dtrain, dtest = dtest, box = box)
 #' res <- norm.prim(dtrain = dtrain, dtest = dtest, box = box)
 #'
-#' plot(res.rf[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
-#' xlab = "recall", ylab = "precision")
-#' lines(res.rf[[2]], col = "red")
+#' plot(res.svm[[2]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
+#' xlab = "recall", ylab = "precision", col = "red")
 #' lines(res[[1]], col = "blue")
-#' legend("bottomleft", legend = c("rf prob test", "rf pred test", "norm test"),
-#' col = c("black", "red", "blue"), lty = c(1, 1, 1))
+#' legend("bottomleft", legend = c("svm pred test", "norm test"),
+#' col = c("red", "blue"), lty = c(1,1))
 #'
 #'
-#' res.rf <- rf.prim(dtrain = dtrain, dtest = dtest, box = box,
+#' res.svm <- svm.prim(dtrain = dtrain, dtest = dtest, box = box,
 #' peel.alpha = c(0.03, 0.05, 0.07, 0.10, 0.13, 0.16, 0.2))
 #' res <- norm.prim(dtrain = dtrain, dtest = dtest, box = box,
 #' peel.alpha = c(0.03, 0.05, 0.07, 0.10, 0.13, 0.16, 0.2))
 #'
-#' plot(res.rf[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
-#' xlab = "recall", ylab = "precision")
-#' lines(res.rf[[2]], col = "red")
+#' plot(res.svm[[2]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
+#' xlab = "recall", ylab = "precision", col = "red")
+#' lines(res.svm[[2]], col = "red")
 #' lines(res[[1]], col = "blue")
-#' legend("bottomleft", legend = c("rf prob test", "rf pred test", "norm test"),
-#' col = c("black", "red", "blue"), lty = c(1, 1, 1))
+#' legend("bottomleft", legend = c("svm pred test", "norm test"),
+#' col = c("red", "blue"), lty = c(1, 1))
 
 
-rf.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.peels = 999,
+svm.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.peels = 999,
                     peel.alpha = 0.05, threshold = 1, npts = 100000, grow.deep = FALSE, seed = 2020){
 
   time1 = Sys.time()
@@ -112,49 +111,30 @@ rf.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.
 
   fitControl <- caret::trainControl(method = "cv", number = 10)
 
-  res.rf <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]), method = "rf", trControl = fitControl)
-  print("finished with training RF")
+  res.svm <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]), method = "svmRadial", trControl = fitControl)
+  print("finished with training svm")
 
-  time2 = Sys.time()
-
-  dp[[2]] <- predict(res.rf, dp[[1]], type = "prob")[, 2]
-  if(grow.deep){
-    deval = dp
-  }
-
-  time3 = Sys.time()
-
-  temp <- norm.prim(dtrain = dp, dtest = dtest, deval = deval, box = box,
-                    minpts = minpts, peel.alpha = peel.alpha)
-
-  time.prob = time3 - time1 + temp$time.train
-
-  pr.prob <- temp$pr.test
-  boxes.prob <- temp$boxes
-
-  time4 = Sys.time()
-
-  dp[[2]] <- predict(res.rf, dp[[1]])
+  dp[[2]] <- predict(res.svm, dp[[1]])
   dp[[2]] <- as.numeric(as.character(dp[[2]]))
   if(grow.deep){
     dtrain = dp
   }
 
-  time5 = Sys.time()
+  time2 = Sys.time()
 
   temp <- norm.prim(dtrain = dp, dtest = dtest, deval = dtrain, box = box,
                     minpts = minpts, max.peels = max.peels, peel.alpha = peel.alpha,
                     threshold = threshold)
 
-  time.pred = time5 - time4 + time2 - time1 + temp$time.train
+  time.pred = time2 - time1 + temp$time.train
 
   pr.pred <- temp$pr.test
   boxes.pred <- temp$boxes
 
 
-  return(list(pr.prob = pr.prob, pr.pred = pr.pred, boxes.prob = boxes.prob, boxes.pred = boxes.pred,
-              time.prob = time.prob, time.pred = time.pred,
-              tune.par = res.rf$bestTune, peel.alpha = peel.alpha))
+  return(list(pr.prob = NA, pr.pred = pr.pred, boxes.prob = NA, boxes.pred = boxes.pred,
+              time.prob = NA, time.pred = time.pred,
+              tune.par = res.svm$bestTune, peel.alpha = peel.alpha))
 }
 
 

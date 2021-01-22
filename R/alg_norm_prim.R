@@ -69,6 +69,8 @@ norm.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, ma
                      peel.alpha = 0.05, pasting = FALSE, paste.alpha = 0.01, threshold = 1,
                      seed = 2020){
 
+  time1 = Sys.time()
+
   if(length(peel.alpha) > 1){
     peel.alpha <- select.alpha(dtrain = dtrain, box = box, minpts = minpts,
                                max.peels = max.peels, peel.alpha = peel.alpha,
@@ -81,30 +83,34 @@ norm.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, ma
     bnd <- -Inf
     vol.red <- 1
 
-    for(i in 1:ncol(x)){
+    for(i in which(box[2,] - box[1,] != 0)){
       bound <- quantile(x[, i], peel.alpha, type = 8)
       vol.r <- (bound - box[1, i])/(box[2, i] - box[1, i])
-      retain <- (x[, i] >= bound)                                   # this inequality implicitly assumes low (< peel.alpha) share of duplicates for each value
-      tar <- sum(y[retain])/sum(retain)
-      if(tar > hgh | (tar == hgh & vol.r < vol.red)){
-        hgh <- tar
-        vol.red <- vol.r
-        inds <- retain
-        rn = 1
-        cn = i
-        bnd = bound
+      retain <- (x[, i] > bound)                                   # this inequality implicitly assumes low (< peel.alpha) share of duplicates for each value
+      if(sum(retain)){
+        tar <- sum(y[retain])/sum(retain)
+        if(tar > hgh | (tar == hgh & vol.r < vol.red)){
+          hgh <- tar
+          vol.red <- vol.r
+          inds <- retain
+          rn = 1
+          cn = i
+          bnd = bound
+        }
       }
       bound <- quantile(x[, i], 1 - peel.alpha, type = 8)
       vol.r <- (box[2, i] - bound)/(box[2, i] - box[1, i])
-      retain <- (x[, i] <= bound)
-      tar <- sum(y[retain])/sum(retain)
-      if(tar > hgh | (tar == hgh & vol.r < vol.red)){
-        vol.red <- vol.r
-        hgh <- tar
-        inds <- retain
-        rn = 2
-        cn = i
-        bnd = bound
+      retain <- (x[, i] < bound)
+      if(sum(retain)){
+        tar <- sum(y[retain])/sum(retain)
+        if(tar > hgh | (tar == hgh & vol.r < vol.red)){
+          vol.red <- vol.r
+          hgh <- tar
+          inds <- retain
+          rn = 2
+          cn = i
+          bnd = bound
+        }
       }
     }
     x <<- x[inds,, drop = FALSE]
@@ -113,12 +119,12 @@ norm.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, ma
     continue.peeling <<- ((sum(inds)/length(inds)) < 1 & hgh < threshold)
   }
 
-  qual.pr <- function(d){
+  qual.pr <- function(d, box.p){
     Np = sum(d[[2]])
     retain <- rep(TRUE, length(d[[2]]))
     for(i in 1:ncol(d[[1]])){
-      retain <- retain & d[[1]][, i] >= box.p[1, i]
-      retain <- retain & d[[1]][, i] <= box.p[2, i]
+      retain <- retain & d[[1]][, i] > box.p[1, i]
+      retain <- retain & d[[1]][, i] < box.p[2, i]
     }
     n = length(d[[2]][retain])
     np = sum(d[[2]][retain])
@@ -139,12 +145,9 @@ norm.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, ma
   q <- qtest <- matrix(ncol = 2, nrow = 0)
 
   while(length(y) >= minpts & neval >= minpts & continue.peeling & i <= max.peels){
-    temp <- qual.pr(deval)
+    temp <- qual.pr(deval, box.p)
     neval <- temp[3]
     q <- rbind(q, temp[1:2])
-    if(!is.null(dtest)){
-      qtest <- rbind(qtest, qual.pr(dtest)[1:2])
-    }
     i <- i + 1
     boxes <- append(boxes, list(box.p))
     peel()
@@ -167,11 +170,17 @@ norm.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, ma
   ret <- which(q[, 2] == max(q[, 2]))[1]
   q <- matrix(q[1:ret,], ncol = 2)
   boxes <- boxes[1:ret]
+
+  time.train = Sys.time() - time1
+
   if(!is.null(dtest)){
-    qtest <- matrix(qtest[1:ret,], ncol = 2)
+    for(i in boxes){
+      qtest <- rbind(qtest, qual.pr(dtest, i)[1:2])
+    }
   }
 
-  return(list(pr.test = qtest, pr.eval = q, boxes = boxes, peel.alpha = peel.alpha))
+  return(list(pr.test = qtest, pr.eval = q, boxes = boxes,
+              peel.alpha = peel.alpha, time.train = time.train))
 }
 
 

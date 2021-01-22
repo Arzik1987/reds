@@ -81,6 +81,8 @@ bumping.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20,
                          max.peels = 999, peel.alpha = 0.05, threshold = 1,
                          depth = "all", iter = 50, denom = 6, seed = 2020){
 
+  time1 = Sys.time()
+
   nc <- ncol(dtrain[[1]])
 
   if(length(peel.alpha) > 1){
@@ -121,32 +123,51 @@ bumping.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20,
     indc <- sample(1:nc, depth, replace = FALSE)
     d[[1]] <- dtrain[[1]][ind, indc, drop = FALSE]
     d[[2]] <- dtrain[[2]][ind]
-    if(!is.null(dtest)){
-      dt[[1]] <- dtest[[1]][, indc, drop = FALSE]
-    }
     de[[1]] <- deval[[1]][, indc, drop = FALSE]
     boxt <- box[, indc, drop = FALSE]
 
-    temp <- norm.prim(dtrain = d, dtest = dt, deval = de, box = boxt,
+    temp <- norm.prim(dtrain = d, dtest = NULL, deval = de, box = boxt,
                       minpts = minpts, max.peels = max.peels,
                       peel.alpha = peel.alpha, pasting = FALSE,
                       threshold = threshold)
-    if(i == 1){
-      pr.test <- temp[[1]]
+    if(i == 1){ # TODO: get rid of this construction
       pr.eval <- temp[[2]]
       boxes <- lapply(temp[[3]], function(x){a <- box; a[,indc] <- x; return(a)})
     } else {
-      pr.test <- rbind(pr.test, temp[[1]])
       pr.eval <- rbind(pr.eval, temp[[2]])
       boxes <- append(boxes, lapply(temp[[3]], function(x){a <- box; a[,indc] <- x; return(a)}))
     }
   }
 
   ind <- get.dominant(pr.eval)
-  pr.test <- pr.test[ind,, drop = FALSE]
-  pr.eval = pr.eval[ind,, drop = FALSE]
+  pr.eval <- pr.eval[ind,, drop = FALSE]
+  boxes <- boxes[ind]
 
-  res <- list(pr.test = pr.test, pr.eval = pr.eval, boxes = boxes[ind],
-              peel.alpha = peel.alpha, depth = depth)
+  time.train = Sys.time() - time1
+
+  qual.pr <- function(d, box.p){
+    Np = sum(d[[2]])
+    retain <- rep(TRUE, length(d[[2]]))
+    for(i in 1:ncol(d[[1]])){
+      retain <- retain & d[[1]][, i] > box.p[1, i]
+      retain <- retain & d[[1]][, i] < box.p[2, i]
+    }
+    n = length(d[[2]][retain])
+    np = sum(d[[2]][retain])
+    rec <- np/Np
+    pr <- np/n
+    c(rec, pr, sum(retain))
+  }
+
+  pr.test <- matrix(ncol = 2, nrow = 0)
+  if(!is.null(dtest)){
+    for(i in boxes){
+      pr.test <- rbind(pr.test, qual.pr(dtest, i)[1:2])
+    }
+  }
+
+
+  res <- list(pr.test = pr.test, pr.eval = pr.eval, boxes = boxes,
+              peel.alpha = peel.alpha, depth = depth, time.train = time.train)
   return(res)
 }

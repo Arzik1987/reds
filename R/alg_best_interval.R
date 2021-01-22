@@ -64,6 +64,8 @@
 best.interval <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
                           keep = 10, denom = 6, seed = 2020){
 
+  time1 <- Sys.time()
+
   nc <- ncol(dtrain[[1]])
 
   if(depth[1] == "cv"){
@@ -95,7 +97,7 @@ best.interval <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 
 
   # refine a single dimension of the box
   # numbers below correspond to row numbers in Algorithm 3 in the reference
-  refine <- function(dx, dy, box, ind, start.q){
+  refine <- function(dx, dy, box.tmp, ind, start.q){
 
     N <- length(dy)
     Np <- sum(dy)
@@ -103,15 +105,15 @@ best.interval <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 
     ind.in.box <- rep(TRUE, N)
     for(i in 1:ncol(dx)){
       if(!(i == ind)){
-        ind.in.box <- ind.in.box & (dx[, i] >= box[1, i] & dx[, i] <= box[2, i])
+        ind.in.box <- ind.in.box & (dx[, i] >= box.tmp[1, i] & dx[, i] <= box.tmp[2, i])
       }
     }
     in.box <- cbind(dx[ind.in.box, ind], dy[ind.in.box])
     in.box <- in.box[order(in.box[, 1]),]
 
     t.m <- h.m <- -Inf                                      # 3-4
-    l <- box[1, ind]                                        # 1
-    r <- box[2, ind]                                        # 1
+    l <- box.tmp[1, ind]                                        # 1
+    r <- box.tmp[2, ind]                                        # 1
     n <- nrow(in.box)
     np <- sum(in.box[, 2])
     wracc.m = start.q                                       # 2
@@ -127,7 +129,7 @@ best.interval <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 
       h <- wracc(n, np, N, Np)                              # 7
       if(h > h.m){                                          # 8
         h.m <- h                                            # 9
-        t.m <- ifelse(i == 1, t[i], (t[i] + t[i - 1])/2)    # 10
+        t.m <- ifelse(i == 1, box[1,ind], (t[i] + t[i - 1])/2)    # 10
       }
       tmp <- in.box[in.box[, 1] >= t.m & in.box[, 1] <= t[i],, drop = FALSE]
       n.i <- nrow(tmp)
@@ -135,13 +137,13 @@ best.interval <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 
       wracc.i <- wracc(n.i, np.i, N, Np)
       if(wracc.i > wracc.m){                                # 11
         l <- t.m                                            # 12
-        r <- ifelse(i == itert, t[i], (t[i] + t[i + 1])/2)  # 12
+        r <- ifelse(i == itert, box[2,ind], (t[i] + t[i + 1])/2)  # 12
         wracc.m <- wracc.i                                  # 13
       }
     }
 
-    box[, ind] <- c(l, r)
-    list(box, wracc.m, ifelse(wracc.m == start.q, 0, 1))    # the last value 0 indicates that the box is a dead end
+    box.tmp[, ind] <- c(l, r)
+    list(box.tmp, wracc.m, ifelse(wracc.m == start.q, 0, 1))    # the last value 0 indicates that the box is a dead end
   }
 
   get.dup.boxes <- function(boxes){
@@ -181,7 +183,7 @@ best.interval <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 
         if(length(res.box) > beam.size){
           inds <- get.dup.boxes(res.box)
           if(length(inds) > 0){
-            res.tab <- res.tab[-inds, ]
+            res.tab <- res.tab[-inds, ] # maybe sort here?
             res.box <- res.box[-inds]
           }
         }
@@ -210,11 +212,14 @@ best.interval <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 
 
   winner <- which(res.tab[, 1] == max(res.tab[, 1]))[1]
   box <- res.box[[winner]]
+
+  time.train <- Sys.time() - time1
+
   qtest <- NULL
   if(!is.null(dtest)){
     qtest <- qual.wracc(dtest, box)
   }
 
-  return(list(qtest = qtest, qtrain = res.tab[winner, 1], box = box, depth = depth))
+  return(list(qtest = qtest, qtrain = res.tab[winner, 1], box = box, depth = depth, time.train = time.train))
 }
 

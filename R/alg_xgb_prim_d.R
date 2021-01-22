@@ -1,6 +1,6 @@
-#' RF -> PRIM
+#' xgbTree -> PRIM
 #'
-#' The function learns RF model on a given dataset. Then it generates new points with latin hypercube sampling
+#' The function learns xgbTree model on a given dataset. Then it generates new points with latin hypercube sampling
 #' and labels them. These new points serve as input for PRIM algorithm.
 #'
 #' @param dtrain list, containing training data. The first element contains matrix/data frame of real attribute values.
@@ -59,32 +59,31 @@
 #' box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
 #' 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
 #'
-#' res.rf <- rf.prim(dtrain = dtrain, dtest = dtest, box = box)
+#' res.xgb <- xgb.prim(dtrain = dtrain, dtest = dtest, box = box)
 #' res <- norm.prim(dtrain = dtrain, dtest = dtest, box = box)
 #'
-#' plot(res.rf[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
+#' plot(res.xgb[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
 #' xlab = "recall", ylab = "precision")
-#' lines(res.rf[[2]], col = "red")
+#' lines(res.xgb[[2]], col = "red")
 #' lines(res[[1]], col = "blue")
-#' legend("bottomleft", legend = c("rf prob test", "rf pred test", "norm test"),
+#' legend("bottomleft", legend = c("xgb prob test", "xgb pred test", "norm test"),
 #' col = c("black", "red", "blue"), lty = c(1, 1, 1))
 #'
-#'
-#' res.rf <- rf.prim(dtrain = dtrain, dtest = dtest, box = box,
+#' res.xgb <- xgb.prim(dtrain = dtrain, dtest = dtest, box = box,
 #' peel.alpha = c(0.03, 0.05, 0.07, 0.10, 0.13, 0.16, 0.2))
 #' res <- norm.prim(dtrain = dtrain, dtest = dtest, box = box,
 #' peel.alpha = c(0.03, 0.05, 0.07, 0.10, 0.13, 0.16, 0.2))
 #'
-#' plot(res.rf[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
+#' plot(res.xgb[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
 #' xlab = "recall", ylab = "precision")
-#' lines(res.rf[[2]], col = "red")
+#' lines(res.xgb[[2]], col = "red")
 #' lines(res[[1]], col = "blue")
-#' legend("bottomleft", legend = c("rf prob test", "rf pred test", "norm test"),
+#' legend("bottomleft", legend = c("xgb prob test", "xgb pred test", "norm test"),
 #' col = c("black", "red", "blue"), lty = c(1, 1, 1))
 
 
-rf.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.peels = 999,
-                    peel.alpha = 0.05, threshold = 1, npts = 100000, grow.deep = FALSE, seed = 2020){
+xgb.prim.d <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.peels = 999,
+                    peel.alpha = 0.05, threshold = 1, npts = 100000, grow.deep = FALSE, seed = 2020, dis = NULL){
 
   time1 = Sys.time()
 
@@ -103,6 +102,9 @@ rf.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.
     for(i in 1:dim){
     d.width <- box[2, i] - box[1, i]
     dp[[1]][, i] <- dp[[1]][, i]*d.width + box[1, i]
+    }
+  for(i in dis){
+    dp[[1]][, i] <- make.discr(dp[[1]][, i], low = box[1, i], high = box[2, i], nval = 5)
   }
 
   colnames(dtrain[[1]]) <- colnames(dp[[1]]) <- paste0("x", paste0(1:dim))
@@ -110,14 +112,15 @@ rf.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.
     colnames(dtest[[1]]) <- paste0("x", paste0(1:dim))
   }
 
-  fitControl <- caret::trainControl(method = "cv", number = 10)
+  fitControl <- caret::trainControl(method = "cv", number = 10, allowParallel = FALSE)
 
-  res.rf <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]), method = "rf", trControl = fitControl)
-  print("finished with training RF")
+  res.xgb <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]),
+                          method = "xgbTree", trControl = fitControl, nthread = 1)
+  print("finished with training xgbTree")
 
   time2 = Sys.time()
 
-  dp[[2]] <- predict(res.rf, dp[[1]], type = "prob")[, 2]
+  dp[[2]] <- predict(res.xgb, dp[[1]], type = "prob")[, 2]
   if(grow.deep){
     deval = dp
   }
@@ -134,7 +137,7 @@ rf.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.
 
   time4 = Sys.time()
 
-  dp[[2]] <- predict(res.rf, dp[[1]])
+  dp[[2]] <- predict(res.xgb, dp[[1]])
   dp[[2]] <- as.numeric(as.character(dp[[2]]))
   if(grow.deep){
     dtrain = dp
@@ -151,10 +154,9 @@ rf.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.
   pr.pred <- temp$pr.test
   boxes.pred <- temp$boxes
 
-
   return(list(pr.prob = pr.prob, pr.pred = pr.pred, boxes.prob = boxes.prob, boxes.pred = boxes.pred,
               time.prob = time.prob, time.pred = time.pred,
-              tune.par = res.rf$bestTune, peel.alpha = peel.alpha))
+              tune.par = res.xgb$bestTune, peel.alpha = peel.alpha))
 }
 
 

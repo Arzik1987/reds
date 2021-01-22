@@ -53,12 +53,12 @@
 #' box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
 #' 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
 #'
-#' rf.bi(dtrain = dtrain, dtest = dtest, box = box, depth = "all", npts = 1000)
-#' rf.bi(dtrain = dtrain, dtest = dtest, box = box, depth = "cv", npts = 1000)
+#' xgb.bi(dtrain = dtrain, dtest = dtest, box = box, depth = "all", npts = 1000)
+#' xgb.bi(dtrain = dtrain, dtest = dtest, box = box, depth = "cv", npts = 1000)
 
 
-rf.bi <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
-                    keep = 10, denom = 6, npts = 10000, labels = FALSE, seed = 2020){
+xgb.bi.d <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
+                    keep = 10, denom = 6, npts = 10000, labels = FALSE, seed = 2020, dis = NULL){
 
   time1 = Sys.time()
 
@@ -80,16 +80,27 @@ rf.bi <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
     for(i in 1:nc){
     d.width <- box[2, i] - box[1, i]
     dp[[1]][, i] <- dp[[1]][, i]*d.width + box[1, i]
+    }
+  for(i in dis){
+    dp[[1]][, i] <- make.discr(dp[[1]][, i], low = box[1, i], high = box[2, i], nval = 5)
   }
 
-  colnames(dtrain[[1]]) <- colnames(dtest[[1]]) <- colnames(dp[[1]]) <- paste0("x", paste0(1:nc))
-  res.rf <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]), method = "rf")
-  print("finished with training RF")
+  colnames(dtrain[[1]]) <- colnames(dp[[1]]) <- paste0("x", paste0(1:nc))
+  if(!is.null(dtest)){
+    colnames(dtest[[1]]) <- paste0("x", paste0(1:nc))
+  }
+
+  fitControl <- caret::trainControl(method = "cv", number = 10, allowParallel = FALSE)
+
+  res.xgb <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]),
+                          method = "xgbTree", trControl = fitControl, nthread = 1)
+
+  print("finished with training xgbTree")
 
   if(labels){
-    dp[[2]] <- as.numeric(as.character(predict(res.rf, dp[[1]])))
+    dp[[2]] <- as.numeric(as.character(predict(res.xgb, dp[[1]])))
   } else {
-    dp[[2]] <- predict(res.rf, dp[[1]], type = "prob")[, 2]
+    dp[[2]] <- predict(res.xgb, dp[[1]], type = "prob")[, 2]
   }
 
   time2 = Sys.time()
@@ -99,7 +110,7 @@ rf.bi <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
   time.train = temp$time.train + time2 - time1
 
   return(list(qtest = temp$qtest, qtrain = temp$qtrain, box = temp$box,
-              depth = temp$depth, tune.par = res.rf$bestTune, time.train = time.train))
+              depth = temp$depth, tune.par = res.xgb$bestTune, time.train = time.train))
 }
 
 
