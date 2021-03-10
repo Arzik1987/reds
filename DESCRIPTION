@@ -1,8 +1,8 @@
 Package: reds
 Title: Pedagogical Rule Extraction with Subgroup Discovery
-Version: 0.13
-Author: Vadim Arzamasov <vadim.arzamasov@gmail.com>
-Maintainer: Vadim Arzamasov <vadim.arzamasov@gmail.com>
+Version: 0.14
+Author: anon <anon@anonmail.com>
+Maintainer: anon <anon@anonmail.com>
 Description: Subgroup discovery with intermediate step of labeling more points with random forest.
 Depends: R (>= 3.5.0)
 Imports:

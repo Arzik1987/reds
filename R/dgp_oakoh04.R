@@ -16,12 +16,12 @@ oakoh04 <- function(xx)
   # THERE IS NO WARRANTY, EXPRESS OR IMPLIED. WE DO NOT ASSUME ANY LIABILITY
   # FOR THE USE OF THIS SOFTWARE.  If software is modified to produce
   # derivative works, such modified software should be clearly marked.
-  # Additionally, this program is free software; you can redistribute it 
-  # and/or modify it under the terms of the GNU General Public License as 
-  # published by the Free Software Foundation; version 2.0 of the License. 
-  # Accordingly, this program is distributed in the hope that it will be 
-  # useful, but WITHOUT ANY WARRANTY; without even the implied warranty 
-  # of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+  # Additionally, this program is free software; you can redistribute it
+  # and/or modify it under the terms of the GNU General Public License as
+  # published by the Free Software Foundation; version 2.0 of the License.
+  # Accordingly, this program is distributed in the hope that it will be
+  # useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+  # of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
   # General Public License for more details.
   #
   # For function details and reference information, see:
@@ -34,16 +34,16 @@ oakoh04 <- function(xx)
   # xx = c(x1, x2, ..., x15) (must be a column vector)
   #
   ##########################################################################
-  
+
   xx <- matrix(xx, length(xx), 1)
-  
+
   a1 <- c(0.0118, 0.0456, 0.2297, 0.0393, 0.1177, 0.3865, 0.3897, 0.6061,
           0.6159, 0.4005, 1.0741, 1.1474, 0.7880, 1.1242, 1.1982)
   a2 <- c(0.4341, 0.0887, 0.0512, 0.3233, 0.1489, 1.0360, 0.9892, 0.9672,
           0.8977, 0.8083, 1.8426, 2.4712, 2.3946, 2.0045, 2.2621)
   a3 <- c(0.1044, 0.2057, 0.0774, 0.2730, 0.1253, 0.7526, 0.8570, 1.0331,
           0.8388, 0.7970, 2.2145, 2.0382, 2.4004, 2.0541, 1.9845)
-  
+
   M <- c(-0.022482886,  -0.18501666,  0.13418263,   0.36867264,   0.17172785,   0.13651143,  -0.44034404, -0.081422854,   0.71321025,  -0.44361072,   0.50383394, -0.024101458, -0.045939684,   0.21666181,  0.055887417,
          0.25659630,  0.053792287,  0.25800381,   0.23795905,  -0.59125756, -0.081627077,  -0.28749073,   0.41581639,   0.49752241,  0.083893165,  -0.11056683,  0.033222351,  -0.13979497, -0.031020556,  -0.22318721,
          -0.055999811,   0.19542252, 0.095529005,  -0.28626530,  -0.14441303,   0.22369356,   0.14527412,   0.28998481,   0.23105010,  -0.31929879,  -0.29039128,  -0.20956898,   0.43139047,  0.024429152,  0.044904409,
@@ -60,37 +60,37 @@ oakoh04 <- function(xx)
          -0.24388652,  -0.44098852, 0.012618825,   0.24945112,  0.071101888,   0.24623792,   0.17484502, 0.0085286769,   0.25147070,  -0.14659862, -0.084625150,   0.36931333,  -0.29955293,   0.11044360,  -0.75690139,
          0.041494323,  -0.25980564,  0.46402128,  -0.36112127,  -0.94980789,  -0.16504063, 0.0030943325,  0.052792942,   0.22523648,   0.38390366,   0.45562427,  -0.18631744, 0.0082333995,   0.16670803,   0.16045688)
   M <- matrix(M, 15, 15, byrow=TRUE)
-  
+
   term1 <- t(a1) %*% xx
   term2 <- t(a2) %*% sin(xx)
   term3 <- t(a3) %*% cos(xx)
   term4 <- t(xx) %*% M %*% xx
-  
+
   y <- term1 + term2 + term3 + term4
   return(as.numeric(y))
 }
 
 
-dgp.oakoh04 <- function(box, n.points, laths = TRUE, pts = 0, use.pts = FALSE, thr = 10){
-  
+dgp.oakoh04 <- function(box, n.points, distr = "laths", nval = 5, pts = 0, use.pts = FALSE, thr = 10){
+
   dim <- 15
   if(is.null(box)){
     box <- matrix(c(rep(0, dim), rep(1, dim)), nrow = 2, byrow = TRUE)
-  }  
-  
+  }
+
   if(use.pts){
     if(ncol(pts) != dim) stop(paste0("pts should have ", dim, " dimensions"))
     d <- pts
   } else {
     if(ncol(box) != dim) stop(paste0("box should have ", dim, " dimensions"))
-    d <- get.data(box, n.points, laths)
+    d <- get.data(box, n.points, distr, nval)
   }
-  
+
   low <- rep(-1, dim)
   up <- rep(1, dim)
-  
+
   y <- apply(d.scale(d, low, up), 1, oakoh04)
   y <- ifelse(y < thr, 1, 0)
-  
+
   return(list(d, y))
 }

@@ -16,12 +16,12 @@ moon10hd <- function(xx)
   # THERE IS NO WARRANTY, EXPRESS OR IMPLIED. WE DO NOT ASSUME ANY LIABILITY
   # FOR THE USE OF THIS SOFTWARE.  If software is modified to produce
   # derivative works, such modified software should be clearly marked.
-  # Additionally, this program is free software; you can redistribute it 
-  # and/or modify it under the terms of the GNU General Public License as 
-  # published by the Free Software Foundation; version 2.0 of the License. 
-  # Accordingly, this program is distributed in the hope that it will be 
-  # useful, but WITHOUT ANY WARRANTY; without even the implied warranty 
-  # of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+  # Additionally, this program is free software; you can redistribute it
+  # and/or modify it under the terms of the GNU General Public License as
+  # published by the Free Software Foundation; version 2.0 of the License.
+  # Accordingly, this program is distributed in the hope that it will be
+  # useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+  # of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
   # General Public License for more details.
   #
   # For function details and reference information, see:
@@ -34,11 +34,11 @@ moon10hd <- function(xx)
   # xx = c(x1, x2, ..., x20)
   #
   ##########################################################################
-  
+
   coefflin <- c(-2.08, 2.11, 0.76, -0.57, -0.72, -0.47, 0.39, 1.40, -0.09, -0.70, -1.27, -1.03, 1.07, 2.23, 2.46, -1.31, -2.94, 2.63, 0.07, 2.44)
-  
+
   sumdeg1 <- sum(coefflin*xx)
-  
+
   coeffs <- matrix(0, 20, 20)
   coeffs[,1]  <- c(1.42,  2.18, 0.58, -1.21, -7.15, -1.29, -0.19, -2.75, -1.16, -1.09,  0.89, -0.16,  4.43,  1.65, -1.25, -1.35,  1.15, -19.71,  23.72,  1.42)
   coeffs[,2]  <- c(   0, -1.70, 0.84,  1.20, -2.35, -0.16, -0.19, -5.93, -1.15,  1.89, -3.47, -0.07, -0.60, -1.09, -3.23,  0.44,  1.24,   2.13,  -0.71,  1.64)
@@ -60,33 +60,33 @@ moon10hd <- function(xx)
   coeffs[,18] <- c(   0,     0,    0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,   0.35,  -1.99,  1.50)
   coeffs[,19] <- c(   0,     0,    0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,      0, -13.34,  1.34)
   coeffs[,20] <- c(   0,     0,    0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,      0,      0, -0.38)
-  
+
   xxmat <- matrix(rep(xx,times=20), 20, 20, byrow=TRUE)
   factors <- rowSums(coeffs*xxmat*t(xxmat))
   sumdeg2 <- sum(sum(factors))
-  
+
   y <- sumdeg1 + sumdeg2
   return(y)
 }
 
 
-dgp.moon10hd <- function(box, n.points, laths = TRUE, pts = 0, use.pts = FALSE, thr = 0){
-  
+dgp.moon10hd <- function(box, n.points, distr = "laths", nval = 5, pts = 0, use.pts = FALSE, thr = 0){
+
   dim <- 20
   if(is.null(box)){
     box <- matrix(c(rep(0, dim), rep(1, dim)), nrow = 2, byrow = TRUE)
-  }  
-  
+  }
+
   if(use.pts){
     if(ncol(pts) != dim) stop(paste0("pts should have ", dim, " dimensions"))
     d <- pts
   } else {
     if(ncol(box) != dim) stop(paste0("box should have ", dim, " dimensions"))
-    d <- get.data(box, n.points, laths)
+    d <- get.data(box, n.points, distr, nval)
   }
 
   y <- apply(d, 1, moon10hd)
   y <- ifelse(y < thr, 1, 0)
-  
+
   return(list(d, y))
 }

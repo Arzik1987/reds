@@ -83,7 +83,7 @@ norm.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, ma
     bnd <- -Inf
     vol.red <- 1
 
-    for(i in which(box[2,] - box[1,] != 0)){
+    for(i in 1:ncol(x)){
       bound <- quantile(x[, i], peel.alpha, type = 8)
       vol.r <- (bound - box[1, i])/(box[2, i] - box[1, i])
       retain <- (x[, i] > bound)                                   # this inequality implicitly assumes low (< peel.alpha) share of duplicates for each value
@@ -113,10 +113,14 @@ norm.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, ma
         }
       }
     }
-    x <<- x[inds,, drop = FALSE]
-    y <<- y[inds]
-    box[rn, cn] <<- bnd
-    continue.peeling <<- ((sum(inds)/length(inds)) < 1 & hgh < threshold)
+    if(hgh == -Inf){
+      continue.peeling <<- FALSE
+    } else {
+      x <<- x[inds,, drop = FALSE]
+      y <<- y[inds]
+      box[rn, cn] <<- bnd
+      continue.peeling <<- (hgh < threshold)
+    }
   }
 
   qual.pr <- function(d, box.p){

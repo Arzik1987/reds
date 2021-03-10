@@ -2,4 +2,6 @@
 ^\.Rproj\.user$
 \.git
 \.gitignore
+README.md
+build.R
 packaging

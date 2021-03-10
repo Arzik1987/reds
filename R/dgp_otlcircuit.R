@@ -16,12 +16,12 @@ otlcircuit <- function(xx)
   # THERE IS NO WARRANTY, EXPRESS OR IMPLIED. WE DO NOT ASSUME ANY LIABILITY
   # FOR THE USE OF THIS SOFTWARE.  If software is modified to produce
   # derivative works, such modified software should be clearly marked.
-  # Additionally, this program is free software; you can redistribute it 
-  # and/or modify it under the terms of the GNU General Public License as 
-  # published by the Free Software Foundation; version 2.0 of the License. 
-  # Accordingly, this program is distributed in the hope that it will be 
-  # useful, but WITHOUT ANY WARRANTY; without even the implied warranty 
-  # of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+  # Additionally, this program is free software; you can redistribute it
+  # and/or modify it under the terms of the GNU General Public License as
+  # published by the Free Software Foundation; version 2.0 of the License.
+  # Accordingly, this program is distributed in the hope that it will be
+  # useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+  # of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
   # General Public License for more details.
   #
   # For function details and reference information, see:
@@ -35,52 +35,52 @@ otlcircuit <- function(xx)
   # xx = c(Rb1, Rb2, Rf, Rc1, Rc2, beta)
   #
   ##########################################################################
-  
+
   Rb1  <- xx[1]
   Rb2  <- xx[2]
   Rf   <- xx[3]
   Rc1  <- xx[4]
   Rc2  <- xx[5]
   beta <- xx[6]
-  
+
   Vb1 <- 12*Rb2 / (Rb1+Rb2)
   term1a <- (Vb1+0.74) * beta * (Rc2+9)
   term1b <- beta*(Rc2+9) + Rf
   term1 <- term1a / term1b
-  
+
   term2a <- 11.35 * Rf
   term2b <- beta*(Rc2+9) + Rf
   term2 <- term2a / term2b
-  
+
   term3a <- 0.74 * Rf * beta * (Rc2+9)
   term3b <- (beta*(Rc2+9)+Rf) * Rc1
   term3 <- term3a / term3b
-  
+
   Vm <- term1 + term2 + term3
   return(Vm)
 }
 
 
-dgp.otlcircuit <- function(box, n.points, laths = TRUE, pts = 0, use.pts = FALSE, thr = 4.5){
-  
+dgp.otlcircuit <- function(box, n.points, distr = "laths", nval = 5, pts = 0, use.pts = FALSE, thr = 4.5){
+
   dim <- 6
   if(is.null(box)){
     box <- matrix(c(rep(0, dim), rep(1, dim)), nrow = 2, byrow = TRUE)
-  }  
-  
+  }
+
   if(use.pts){
     if(ncol(pts) != dim) stop(paste0("pts should have ", dim, " dimensions"))
     d <- pts
   } else {
     if(ncol(box) != dim) stop(paste0("box should have ", dim, " dimensions"))
-    d <- get.data(box, n.points, laths)
+    d <- get.data(box, n.points, distr, nval)
   }
-  
+
   low <- c(50, 25, 0.5, 1.2, 0.25, 50)
   up <- c(150, 70, 3, 2.5, 1.2, 300)
 
   y <- apply(d.scale(d, low, up), 1, otlcircuit)
   y <- ifelse(y < thr, 1, 0)
-  
+
   return(list(d, y))
 }

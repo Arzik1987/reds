@@ -1,7 +1,7 @@
 # d <- dgp.morrisd3(NULL, 10000)
 # summary(d[[1]])
 
-dgp.morrisd3 <- function(box, n.points, laths = TRUE, pts = 0, use.pts = FALSE, thr = 20){
+dgp.morrisd3 <- function(box, n.points, distr = "laths", nval = 5, pts = 0, use.pts = FALSE, thr = 20){
 
   dim <- 20
   if(is.null(box)){
@@ -13,7 +13,7 @@ dgp.morrisd3 <- function(box, n.points, laths = TRUE, pts = 0, use.pts = FALSE, 
     d <- pts
   } else {
     if(ncol(box) != dim) stop(paste0("box should have ", dim, " dimensions"))
-    d <- get.data(box, n.points, laths)
+    d <- get.data(box, n.points, distr, nval)
   }
 
   for(i in 1:20){

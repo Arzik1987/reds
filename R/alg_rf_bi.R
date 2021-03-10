@@ -57,8 +57,9 @@
 #' rf.bi(dtrain = dtrain, dtest = dtest, box = box, depth = "cv", npts = 1000)
 
 
-rf.bi <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
-                    keep = 10, denom = 6, npts = 10000, labels = FALSE, seed = 2020){
+reds.bi <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
+                    keep = 10, denom = 6, npts = 10000, labels = FALSE, seed = 2020,
+                    distr, nval = 5, meth){
 
   time1 = Sys.time()
 
@@ -76,19 +77,27 @@ rf.bi <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
   set.seed(seed = seed)
 
   dp <- list()
-  dp[[1]] <- lhs::randomLHS(npts, nc)
-    for(i in 1:nc){
-    d.width <- box[2, i] - box[1, i]
-    dp[[1]][, i] <- dp[[1]][, i]*d.width + box[1, i]
+  dp[[1]] <- get.data(box = box, n.points = npts, distr = distr, nval = nval)
+
+  colnames(dtrain[[1]]) <- colnames(dp[[1]]) <- paste0("x", paste0(1:nc))
+  if(!is.null(dtest)){
+    colnames(dtest[[1]]) <- paste0("x", paste0(1:nc))
   }
 
-  colnames(dtrain[[1]]) <- colnames(dtest[[1]]) <- colnames(dp[[1]]) <- paste0("x", paste0(1:nc))
-  res.rf <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]), method = "rf")
-  print("finished with training RF")
+  fitControl <- caret::trainControl(method = "cv", number = 10, allowParallel = FALSE)
+  if(meth == "xgbTree"){
+    res.rf <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]),
+                           method = "xgbTree", trControl = fitControl, nthread = 1)
+  } else {
+    res.rf <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]),
+                           method = meth, trControl = fitControl)
+  }
+  print("finished with training metamodel")
 
   if(labels){
     dp[[2]] <- as.numeric(as.character(predict(res.rf, dp[[1]])))
   } else {
+    if(!(meth %in% c("rf", "xgbTree"))) stop("probabilities are not implemented for this metamodel type")
     dp[[2]] <- predict(res.rf, dp[[1]], type = "prob")[, 2]
   }
 

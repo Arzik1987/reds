@@ -1,19 +1,19 @@
-dgp1 <- function(box, n.points, laths = TRUE, pts = 0, use.pts = FALSE){
-  
+dgp1 <- function(box, n.points, distr = "laths", nval = 5, pts = 0, use.pts = FALSE){
+
   dim <- 5
   if(is.null(box)){
     box <- matrix(c(rep(0, dim), rep(1, dim)), nrow = 2, byrow = TRUE)
-  } 
-  
+  }
+
   if(use.pts){
     d <- pts
   } else {
-    d <- get.data(box, n.points, laths)
+    d <- get.data(box, n.points, distr, nval)
   }
-  
+
   ya <- exp(-10 + 10*d[, 1] + 8*d[, 2])/(1 + exp(-10 + 10*d[, 1] + 8*d[, 2]))
   y <- ifelse(ya >= 0.3, ya + 0.85*(1 - ya), 0.2*ya)
   y <- sapply(y, function(x) rbinom(1, 1, x))
-  
+
   return(list(d, y))
 }

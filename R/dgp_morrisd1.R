@@ -1,7 +1,7 @@
 # d <- dgp.morrisd1(NULL, 10000)
 # summary(d[[1]])
 
-dgp.morrisd1 <- function(box, n.points, laths = TRUE, pts = 0, use.pts = FALSE, thr = 20){
+dgp.morrisd1 <- function(box, n.points, distr = "laths", nval = 5, pts = 0, use.pts = FALSE, thr = 20){
 
   dim <- 20
   if(is.null(box)){
@@ -13,11 +13,7 @@ dgp.morrisd1 <- function(box, n.points, laths = TRUE, pts = 0, use.pts = FALSE, 
     d <- pts
   } else {
     if(ncol(box) != dim) stop(paste0("box should have ", dim, " dimensions"))
-    d <- get.data(box, n.points, laths)
-  }
-
-  for(i in seq(1, 19, by = 2)){
-    d[, i] <- make.discr(d[, i], low = box[1, i], high = box[2, i], nval = 10)
+    d <- get.data(box, n.points, distr, nval)
   }
 
   y <- sensitivity::morris.fun(d)

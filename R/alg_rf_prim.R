@@ -83,8 +83,9 @@
 #' col = c("black", "red", "blue"), lty = c(1, 1, 1))
 
 
-rf.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.peels = 999,
-                    peel.alpha = 0.05, threshold = 1, npts = 100000, grow.deep = FALSE, seed = 2020){
+reds.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.peels = 999,
+                    peel.alpha = 0.05, threshold = 1, npts = 100000, grow.deep = FALSE, seed = 2020,
+                    distr, nval = 5, meth){
 
   time1 = Sys.time()
 
@@ -97,40 +98,44 @@ rf.prim <- function(dtrain, dtest = NULL, deval = dtrain, box, minpts = 20, max.
 
   set.seed(seed = seed)
 
-  dim <- ncol(dtrain[[1]])
+  nc <- ncol(dtrain[[1]])
   dp <- list()
-  dp[[1]] <- lhs::randomLHS(npts, dim)
-    for(i in 1:dim){
-    d.width <- box[2, i] - box[1, i]
-    dp[[1]][, i] <- dp[[1]][, i]*d.width + box[1, i]
-  }
+  dp[[1]] <- get.data(box = box, n.points = npts, distr = distr, nval = nval)
 
-  colnames(dtrain[[1]]) <- colnames(dp[[1]]) <- paste0("x", paste0(1:dim))
+  colnames(dtrain[[1]]) <- colnames(dp[[1]]) <- paste0("x", paste0(1:nc))
   if(!is.null(dtest)){
-    colnames(dtest[[1]]) <- paste0("x", paste0(1:dim))
+    colnames(dtest[[1]]) <- paste0("x", paste0(1:nc))
   }
 
-  fitControl <- caret::trainControl(method = "cv", number = 10)
-
-  res.rf <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]), method = "rf", trControl = fitControl)
-  print("finished with training RF")
+  fitControl <- caret::trainControl(method = "cv", number = 10, allowParallel = FALSE)
+  if(meth == "xgbTree"){
+    res.rf <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]),
+                            method = "xgbTree", trControl = fitControl, nthread = 1)
+  } else {
+    res.rf <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]),
+                           method = meth, trControl = fitControl)
+  }
+  print("finished with training metamodel")
 
   time2 = Sys.time()
 
-  dp[[2]] <- predict(res.rf, dp[[1]], type = "prob")[, 2]
-  if(grow.deep){
-    deval = dp
+  if(meth %in% c("rf", "xgbTree")){
+    dp[[2]] <- predict(res.rf, dp[[1]], type = "prob")[, 2]
+    if(grow.deep){
+      deval = dp
+    }
+
+    time3 = Sys.time()
+
+    temp <- norm.prim(dtrain = dp, dtest = dtest, deval = deval, box = box,
+                      minpts = minpts, peel.alpha = peel.alpha)
+
+    time.prob = time3 - time1 + temp$time.train
+    pr.prob <- temp$pr.test
+    boxes.prob <- temp$boxes
+  } else {
+    time.prob <- pr.prob <- boxes.prob <- NA
   }
-
-  time3 = Sys.time()
-
-  temp <- norm.prim(dtrain = dp, dtest = dtest, deval = deval, box = box,
-                    minpts = minpts, peel.alpha = peel.alpha)
-
-  time.prob = time3 - time1 + temp$time.train
-
-  pr.prob <- temp$pr.test
-  boxes.prob <- temp$boxes
 
   time4 = Sys.time()
 
