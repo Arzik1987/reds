@@ -1,6 +1,6 @@
-#' RF -> BestInterval
+#' REDS with BestInterval
 #'
-#' The function learns RF model on a given dataset. Then it generates new points with latin hypercube sampling
+#' The function learns a metamodel on a given dataset. Then it generates new points
 #' and labels them. These new points serve as input for BestInterval algorithm.
 #'
 #' @param dtrain list, containing training data. The first element contains matrix/data frame of real attribute values.
@@ -23,6 +23,11 @@
 #' otherwise - with probabilities
 #' @param seed seed for reproducibility of hyperparameter optimization procedure.
 #' Default is 2020. Set NULL for not using
+#' @param distr method for sampling the new \code{npts} points. "laths" means
+#' Latin hypercube sampling; "logitnorm" - sampling from logitnormal distribution;
+#' "discr" - Latin hypercube sampling with subsequent equal-width discretization of even inputs
+#' @param nval integer. The number of bins for discretization if \code{distr} = "discr"
+#' @param meth metamodel used in REDS. Can be "rf", "svmRadial" or "xgbTree"
 #'
 #' @keywords models, multivariate
 #'
@@ -34,12 +39,13 @@
 #' \item \code{depth} integer; the value of \code{depth} parameter used
 #' \item \code{tune.par} the best hyperparameter value(s) for random forest, produced with
 #' the default settings of function \code{train} from the 'caret' package.
+#' \item \code{time.train} time to train REDS with BestInterval
 #' }
 #'
 #' @importFrom stats predict
 #'
 #' @seealso \code{\link{best.interval}},
-#' \code{\link{rf.prim}}
+#' \code{\link{reds.prim}}
 #'
 #' @export
 #'
@@ -53,12 +59,13 @@
 #' box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
 #' 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
 #'
-#' xgb.bi(dtrain = dtrain, dtest = dtest, box = box, depth = "all", npts = 1000)
-#' xgb.bi(dtrain = dtrain, dtest = dtest, box = box, depth = "cv", npts = 1000)
+#' reds.bi(dtrain = dtrain, dtest = dtest, box = box, depth = "all", npts = 1000)
+#' reds.bi(dtrain = dtrain, dtest = dtest, box = box, depth = "cv", npts = 1000)
 
 
-xgb.bi.d <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
-                    keep = 10, denom = 6, npts = 10000, labels = FALSE, seed = 2020, dis = NULL){
+reds.bi <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
+                    keep = 10, denom = 6, npts = 10000, labels = FALSE, seed = 2020,
+                    distr, nval = 5, meth){
 
   time1 = Sys.time()
 
@@ -76,14 +83,7 @@ xgb.bi.d <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
   set.seed(seed = seed)
 
   dp <- list()
-  dp[[1]] <- lhs::randomLHS(npts, nc)
-    for(i in 1:nc){
-    d.width <- box[2, i] - box[1, i]
-    dp[[1]][, i] <- dp[[1]][, i]*d.width + box[1, i]
-    }
-  for(i in dis){
-    dp[[1]][, i] <- make.discr(dp[[1]][, i], low = box[1, i], high = box[2, i], nval = 5)
-  }
+  dp[[1]] <- get.data(box = box, n.points = npts, distr = distr, nval = nval)
 
   colnames(dtrain[[1]]) <- colnames(dp[[1]]) <- paste0("x", paste0(1:nc))
   if(!is.null(dtest)){
@@ -91,16 +91,20 @@ xgb.bi.d <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
   }
 
   fitControl <- caret::trainControl(method = "cv", number = 10, allowParallel = FALSE)
-
-  res.xgb <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]),
-                          method = "xgbTree", trControl = fitControl, nthread = 1)
-
-  print("finished with training xgbTree")
+  if(meth == "xgbTree"){
+    res.rf <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]),
+                           method = "xgbTree", trControl = fitControl, nthread = 1)
+  } else {
+    res.rf <- caret::train(as.data.frame(dtrain[[1]]), as.factor(dtrain[[2]]),
+                           method = meth, trControl = fitControl)
+  }
+  print("finished with training metamodel")
 
   if(labels){
-    dp[[2]] <- as.numeric(as.character(predict(res.xgb, dp[[1]])))
+    dp[[2]] <- as.numeric(as.character(predict(res.rf, dp[[1]])))
   } else {
-    dp[[2]] <- predict(res.xgb, dp[[1]], type = "prob")[, 2]
+    if(!(meth %in% c("rf", "xgbTree"))) stop("probabilities are not implemented for this metamodel type")
+    dp[[2]] <- predict(res.rf, dp[[1]], type = "prob")[, 2]
   }
 
   time2 = Sys.time()
@@ -110,7 +114,7 @@ xgb.bi.d <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,
   time.train = temp$time.train + time2 - time1
 
   return(list(qtest = temp$qtest, qtrain = temp$qtrain, box = temp$box,
-              depth = temp$depth, tune.par = res.xgb$bestTune, time.train = time.train))
+              depth = temp$depth, tune.par = res.rf$bestTune, time.train = time.train))
 }
 
 

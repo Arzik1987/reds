@@ -1,7 +1,7 @@
 library(devtools)
 library(roxygen2)
 
-# check()
+check()
 document()
 build()
 install(getwd(), upgrade = "never")

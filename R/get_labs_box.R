@@ -5,10 +5,10 @@
 #'
 #' @param box matrix of real, specifying the box, from which the points should be sampled. If null, the unit box is used
 #' @param n.points integer. Number of points to be sampled and labeled
-#' @param distr sampling strategy. "laths" stands for the latin hypercube sampling,
-#' "tri" means i.i.d. samples of inputs from symmetric triangular distribution,
-#' with "discr", points are sampled with latyn hypercube and even inputs discretized into "nval" values
-#' @param nvaL used if \code{distr = "discr"}. Number of bins used for discretization.
+#' @param distr method for sampling the new \code{npts} points. "laths" means
+#' Latin hypercube sampling; "logitnorm" - sampling from logitnormal distribution;
+#' "discr" - Latin hypercube sampling with subsequent equal-width discretization of even inputs
+#' @param nval integer. The number of bins for discretization if \code{distr} = "discr"
 #' @param pts matrix of real, containing examples to be labeled. Only active if use.pts is true.
 #' @param use.pts logical. If true, pre-spesified points \code{pts} are labeled, otherwize, new \code{n.points}
 #' points are sampled from the hyperbox \code{box}
