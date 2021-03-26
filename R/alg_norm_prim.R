@@ -37,7 +37,7 @@
 #'
 #' @importFrom stats quantile
 #'
-#' @seealso \code{\link{rf.prim}},
+#' @seealso \code{\link{reds.prim}},
 #' \code{\link{bumping.prim}}
 #'
 #' @export

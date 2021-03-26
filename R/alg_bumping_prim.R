@@ -46,7 +46,7 @@
 #' @keywords models, multivariate
 #'
 #' @seealso \code{\link{norm.prim}},
-#' \code{\link{rf.prim}}
+#' \code{\link{reds.prim}}
 #'
 #' @examples
 #'

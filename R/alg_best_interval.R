@@ -33,7 +33,7 @@
 #' \item \code{depth} integer; the value of \code{depth} parameter used
 #' }
 #'
-#' @seealso \code{\link{rf.bi}}
+#' @seealso \code{\link{reds.bi}}
 #'
 #' @export
 #'

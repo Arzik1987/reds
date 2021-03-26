@@ -28,6 +28,8 @@
 #'
 #' @return list of two, containing a matrix of generated points and a vector of labels
 #'
+#' @importFrom stats predict
+#'
 #' @references [1] Dalal, S. et al. 2013. Improving scenario discovery using orthogonal rotations.
 #' Environmental Modelling and Software. 48, (2013), 49-64.
 #'

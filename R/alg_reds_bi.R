@@ -42,7 +42,7 @@
 #' \item \code{time.train} time to train REDS with BestInterval
 #' }
 #'
-#' @importFrom stats predict
+#' @importFrom stats rbinom
 #'
 #' @seealso \code{\link{best.interval}},
 #' \code{\link{reds.prim}}
@@ -59,8 +59,10 @@
 #' box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
 #' 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
 #'
-#' reds.bi(dtrain = dtrain, dtest = dtest, box = box, depth = "all", npts = 1000)
-#' reds.bi(dtrain = dtrain, dtest = dtest, box = box, depth = "cv", npts = 1000)
+#' reds.bi(dtrain = dtrain, dtest = dtest, box = box, depth = "all",
+#' npts = 1000, distr = "laths", meth = "rf")
+#' reds.bi(dtrain = dtrain, dtest = dtest, box = box, depth = "cv",
+#' npts = 1000, distr = "laths", meth = "rf")
 
 
 reds.bi <- function(dtrain, dtest = NULL, box, depth = "all", beam.size = 1,

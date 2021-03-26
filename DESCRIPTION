@@ -13,7 +13,8 @@ Imports:
     randomForest,
     kernlab,
     xgboost,
-    e1071
+    e1071,
+    logitnorm
 Suggests:
     sensitivity
 License: GPL-2

@@ -66,7 +66,8 @@
 #' box <- matrix(c(0.5,0.5,0.5,0.5,1,1,1,1,0.05,0.05,0.05,0.05,
 #' 5,5,5,5,4,4,4,4,1,1,1,1), nrow = 2, byrow = TRUE)
 #'
-#' res.rf <- reds.prim(dtrain = dtrain, dtest = dtest, box = box)
+#' res.rf <- reds.prim(dtrain = dtrain, dtest = dtest, box = box,
+#' distr = "laths", meth = "rf")
 #' res <- norm.prim(dtrain = dtrain, dtest = dtest, box = box)
 #'
 #' plot(res.rf[[1]], type = "l", xlim = c(0, 1), ylim = c(0.5, 1),
@@ -78,7 +79,8 @@
 #'
 #'
 #' res.rf <- reds.prim(dtrain = dtrain, dtest = dtest, box = box,
-#' peel.alpha = c(0.03, 0.05, 0.07, 0.10, 0.13, 0.16, 0.2))
+#' peel.alpha = c(0.03, 0.05, 0.07, 0.10, 0.13, 0.16, 0.2),
+#' distr = "laths", meth = "rf")
 #' res <- norm.prim(dtrain = dtrain, dtest = dtest, box = box,
 #' peel.alpha = c(0.03, 0.05, 0.07, 0.10, 0.13, 0.16, 0.2))
 #'
